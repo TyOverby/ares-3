@@ -1,0 +1,3 @@
+[workspace]
+
+members = ["ares", "linked-stack"]

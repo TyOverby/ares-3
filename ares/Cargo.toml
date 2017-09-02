@@ -1,0 +1,7 @@
+[package]
+name = "ares-3"
+version = "0.1.0"
+authors = ["Ty Overby <ty@pre-alpha.com>"]
+
+[dependencies.linked-stack]
+path = "../linked-stack"

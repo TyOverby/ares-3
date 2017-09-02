@@ -1,0 +1,6 @@
+[package]
+name = "linked-stack"
+version = "0.1.0"
+authors = ["tyoverby"]
+
+[dependencies]
