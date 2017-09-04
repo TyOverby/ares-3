@@ -1,13 +1,15 @@
 use linked_stack::{LinkedStack, LinkedStackBehavior};
+use std::rc::Rc;
+use continuation;
 use function::FunctionPtr;
 use value::Value;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct Symbol(&'static str);
+pub struct Symbol(pub &'static str);
 
 pub type VmResult<T> = Result<T, VmError>;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub(crate) struct StackBehavior;
 impl LinkedStackBehavior for StackBehavior {
     type Symbol = Symbol;
@@ -44,15 +46,18 @@ pub enum Instruction {
     Print,
     Call,
     Ret,
+    Reset,
+    Shift,
+    Resume,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct FuncExecData {
     function: FunctionPtr,
     ip: usize,
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct Vm {
     pub(crate) stack: ValueStack,
     pub(crate) debug_values: Vec<Value>,
@@ -89,7 +94,6 @@ impl Vm {
     }
 
     pub fn step(&mut self) -> VmResult<StepResult> {
-        use self::Instruction::*;
 
         let instruction = {
             let &FuncExecData {
@@ -99,14 +103,16 @@ impl Vm {
             if *ip >= function.borrow().instructions.len() {
                 return Err(VmError::RanOutOfInstructions);
             }
-            let instruction = function.borrow().instructions[*ip].clone();
-
-            instruction
+            function.borrow().instructions[*ip].clone()
         };
 
         self.stack.aux_mut().ip += 1;
 
-        println!("{:?}", instruction);
+        self.apply_instr(instruction)
+    }
+
+    fn apply_instr(&mut self, instruction: Instruction) -> VmResult<StepResult> {
+        use self::Instruction::*;
 
         match instruction {
             Add => {
@@ -152,110 +158,53 @@ impl Vm {
                     self.stack.push(retval)?;
                 }
             }
+            Reset => {
+                // The unique "identifier" for the reset
+                let symbol = self.stack.pop()?.to_symbol()?;
+                // The closure to execute underneath the reset
+                let closure = self.stack.pop()?.to_function()?;
+                // The reset closure must be argumentless
+                assert!(closure.borrow().arg_count == 0);
+                // Execute the reset closure using the symbol as the tag
+                // for the new segment.  This closure exec is easier than
+                // the above because it doesn't need to worry about argument
+                // passing.
+                self.stack.start_segment(
+                    Some(symbol),
+                    FuncExecData{function: closure, ip: 0});
+            }
+            Shift => {
+                // The paired symbol for the shift. (this should be the
+                // same as a symbol further up for a reset).
+                let symbol = self.stack.pop()?.to_symbol()?;
+                // The closure that is executed inside the shift
+                let closure = self.stack.pop()?.to_function()?;
+                // The shift closure takes exactly one argument (the closure)
+                assert!(closure.borrow().arg_count == 1);
+
+                // Split the stack on the symbol that we pulled out earlier.
+                let cont_stack = self.stack.split(symbol)?;
+                // Execute the shift closure with no tag
+                self.stack.start_segment(None, FuncExecData { function: closure, ip: 0 });
+                // The continuation is the argument to the closure.
+                self.stack.push(Value::Continuation(Rc::new(continuation::Continuation {
+                    stack: cont_stack
+                })))?;
+            }
+            Resume  => {
+                // The continuation is the first item
+                let cont = self.stack.pop()?.to_continuation()?;
+                // All continuations are resumed with a value.  This can be
+                // null if a continuation doesn't expect a value
+                let value = self.stack.pop()?;
+                // Reconnect the continuation stack.
+                self.stack.connect(cont.stack.clone());
+                // The "value" of the continuation is the value that the
+                // continuation was resumed with
+                self.stack.push(value)?;
+            }
         }
 
         Ok(StepResult::Continue)
-    }
-}
-
-#[test]
-fn basic_return_value() {
-    use self::Instruction::*;
-    use value::Value::*;
-    use function::{self, new_func};
-
-    let function = new_func(function::Function {
-        name: Some("adder".into()),
-        arg_count: 0,
-        instructions: vec![Push(Integer(1)), Ret],
-    });
-
-    let mut vm = Vm::new(function);
-    let mut vm2 = vm.clone();
-
-    assert_eq!(vm.step(), Ok(StepResult::Continue));
-    assert_eq!(vm.step(), Ok(StepResult::Done(Integer(1))));
-
-    assert_eq!(vm2.run(), Ok(Integer(1)));
-}
-
-#[test]
-fn test_addition() {
-    use self::Instruction::*;
-    use value::Value::*;
-    use function::{self, new_func};
-
-    let function = new_func(function::Function {
-        name: Some("adder".into()),
-        arg_count: 0,
-        instructions: vec![Push(Integer(5)), Push(Integer(10)), Add, Ret],
-    });
-
-    let mut vm = Vm::new(function);
-
-    assert_eq!(vm.run(), Ok(Integer(15)));
-}
-
-#[test]
-fn test_function_call() {
-    use self::Instruction::*;
-    use value::Value::*;
-    use function::{self, new_func};
-
-    let adder = new_func(function::Function {
-        name: Some("adder".into()),
-        arg_count: 2,
-        instructions: vec![Add, Ret],
-    });
-
-    let main = new_func(function::Function {
-        name: Some("main".into()),
-        arg_count: 0,
-        instructions: vec![
-            Push(Integer(5)),
-            Push(Integer(6)),
-            Push(Function(adder)),
-            Push(Integer(2)),
-            Call,
-            Ret,
-        ],
-    });
-
-    let mut vm = Vm::new(main);
-    assert_eq!(vm.run(), Ok(Integer(11)));
-}
-
-#[test]
-fn recursive_fn() {
-    use self::Instruction::*;
-    use value::Value::*;
-    use function::{self, new_func};
-
-    let nullfunc = new_func(function::Function {
-        name: Some("NULL".into()),
-        arg_count: 0,
-        instructions: vec![],
-    });
-
-    let recursive_infinite = new_func(function::Function {
-        name: Some("recursive infinite".into()),
-        arg_count: 0,
-        instructions: vec![
-            Push(Value::Function(nullfunc)),
-            Push(Value::Integer(0)),
-            Call
-        ],
-    });
-
-    if let &mut Push(ref mut f) = &mut recursive_infinite.borrow_mut().instructions[0] {
-        *f = Function(recursive_infinite.clone());
-    }
-
-    let mut vm = Vm::new(recursive_infinite);
-    for i in 0 .. 100 {
-        vm.step().unwrap();
-        vm.step().unwrap();
-        vm.step().unwrap();
-        assert_eq!(vm.stack.link_len(), i + 2);
     }
 }

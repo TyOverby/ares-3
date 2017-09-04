@@ -1,5 +1,6 @@
 use vm::{Symbol, VmError,  VmResult};
 use function::FunctionPtr;
+use continuation::ContinuationPtr;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Value {
@@ -7,6 +8,7 @@ pub enum Value {
     Float(f64),
     Symbol(Symbol),
     Function(FunctionPtr),
+    Continuation(ContinuationPtr)
 }
 
 impl Value {
@@ -41,6 +43,13 @@ impl Value {
         }
     }
 
+    pub fn to_continuation(self) -> VmResult<ContinuationPtr> {
+        match self {
+            Value::Continuation(c) => Ok(c),
+            other => Err(VmError::UnexpectedType(other)),
+        }
+    }
+
     //
     // AS
     //
@@ -68,6 +77,13 @@ impl Value {
     pub fn as_function(&self) -> VmResult<&FunctionPtr> {
         match self {
             &Value::Function(ref f) => Ok(f),
+            other => Err(VmError::UnexpectedType(other.clone())),
+        }
+    }
+
+    pub fn as_continuation(&self) -> VmResult<&ContinuationPtr> {
+        match self {
+            &Value::Continuation(ref c) => Ok(c),
             other => Err(VmError::UnexpectedType(other.clone())),
         }
     }

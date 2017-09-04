@@ -31,7 +31,7 @@ impl Debug for Function {
             match instr {
                 &Instruction::Push(Value::Function(ref funk)) => {
                     if let &Some(ref name) = &funk.borrow().name {
-                        writeln!(f, "    Push(Value(function {:?}))", name);
+                        writeln!(f, "    Push(Value(function {:?}))", name)?;
                     } else {
                         writeln!(f, "    Push(Value(function <no name>))")?;
                     }

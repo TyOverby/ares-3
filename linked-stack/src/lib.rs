@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::fmt::{Debug, Formatter, Result as FmtResult};
 
 pub trait LinkedStackBehavior {
     type Symbol;
@@ -9,13 +10,32 @@ pub trait LinkedStackBehavior {
     fn tag_not_found(symbol: Self::Symbol) -> Self::Error;
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct LinkedStack<T, K, A, B: LinkedStackBehavior> {
     tag: Option<K>,
     aux: A,
     current: Vec<T>,
     previous: Option<Box<LinkedStack<T, K, A, B>>>,
     _phantom: PhantomData<B>,
+}
+
+impl <T, K, A, B: LinkedStackBehavior> Debug for LinkedStack<T, K, A, B>
+where T: Debug, K: Debug, A: Debug {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        if let Some(prev) = self.previous.as_ref() {
+            Debug::fmt(prev, f)?;
+        }
+        writeln!(f, "---------------------")?;
+        writeln!(f, "tag: {:?}", self.tag)?;
+        writeln!(f, "aux: {:?}", self.aux)?;
+        writeln!(f, "values: [")?;
+        for v in &self.current {
+            writeln!(f,  "{:?},", v)?;
+        }
+        writeln!(f, "]")?;
+
+        Ok(())
+    }
 }
 
 impl <T, K, A, B: LinkedStackBehavior<Symbol=K>> LinkedStack<T, K, A, B> {
@@ -230,5 +250,18 @@ mod test {
         stack.kill_segment();
         assert_eq!(stack.link_len(), 1);
         assert_eq!(*stack.aux(), "hello");
+    }
+
+    #[test]
+    fn connect_segment() {
+        let mut stack1: TestLinkedStack = LinkedStack::new("hi");
+        let mut stack2: TestLinkedStack = LinkedStack::new("bye");
+
+        stack1.push(1);
+        stack2.push(2);
+
+        stack1.connect(stack2);
+
+        assert_eq!(stack1.pop(), Ok(2));
     }
 }
