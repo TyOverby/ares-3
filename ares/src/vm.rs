@@ -1,7 +1,5 @@
-use std::rc::Rc;
-
 use linked_stack::{LinkedStack, LinkedStackBehavior};
-use function::Function;
+use function::FunctionPtr;
 use value::Value;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -10,7 +8,7 @@ pub struct Symbol(&'static str);
 pub type VmResult<T> = Result<T, VmError>;
 
 #[derive(Clone, PartialEq)]
-struct StackBehavior;
+pub(crate) struct StackBehavior;
 impl LinkedStackBehavior for StackBehavior {
     type Symbol = Symbol;
     type Error = VmError;
@@ -25,14 +23,14 @@ impl LinkedStackBehavior for StackBehavior {
         VmError::TagNotFound(symbol)
     }
 }
-type ValueStack = LinkedStack<Value, Symbol, FuncExecData, StackBehavior>;
+pub(crate) type ValueStack = LinkedStack<Value, Symbol, FuncExecData, StackBehavior>;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum VmError {
     StackUnderflow,
     StackOverflow,
     CrossBoundary,
-    ArityMismatch { actual: usize, expected: usize},
+    ArityMismatch { actual: usize, expected: usize },
     TagNotFound(Symbol),
     UnexpectedType(Value),
     RanOutOfInstructions,
@@ -50,14 +48,14 @@ pub enum Instruction {
 
 #[derive(Clone, PartialEq)]
 pub struct FuncExecData {
-    function: Rc<Function>,
+    function: FunctionPtr,
     ip: usize,
 }
 
 #[derive(PartialEq, Clone)]
 pub struct Vm {
-    stack: ValueStack,
-    debug_values: Vec<Value>
+    pub(crate) stack: ValueStack,
+    pub(crate) debug_values: Vec<Value>,
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -67,12 +65,12 @@ pub enum StepResult {
 }
 
 impl Vm {
-    pub fn new(function: Rc<Function>) -> Vm {
-        assert!(function.arg_count == 0);
+    pub fn new(function: FunctionPtr) -> Vm {
+        assert!(function.borrow().arg_count == 0);
 
-        let exec_data = FuncExecData{
+        let exec_data = FuncExecData {
             function: function,
-            ip: 0
+            ip: 0,
         };
 
         Vm {
@@ -83,8 +81,9 @@ impl Vm {
 
     pub fn run(&mut self) -> VmResult<Value> {
         loop {
+            println!("STEP");
             if let StepResult::Done(v) = self.step()? {
-                return Ok(v)
+                return Ok(v);
             }
         }
     }
@@ -93,16 +92,21 @@ impl Vm {
         use self::Instruction::*;
 
         let instruction = {
-            let &FuncExecData{ref function, ref ip} = self.stack.aux();
-            if *ip >= function.instructions.len() {
+            let &FuncExecData {
+                ref function,
+                ref ip,
+            } = self.stack.aux();
+            if *ip >= function.borrow().instructions.len() {
                 return Err(VmError::RanOutOfInstructions);
             }
-            let instruction = function.instructions[*ip].clone();
+            let instruction = function.borrow().instructions[*ip].clone();
 
             instruction
         };
 
         self.stack.aux_mut().ip += 1;
+
+        println!("{:?}", instruction);
 
         match instruction {
             Add => {
@@ -125,23 +129,21 @@ impl Vm {
                 let arg_count = self.stack.pop()?.to_int()?;
                 let f = self.stack.pop()?.to_function()?;
 
-                if f.arg_count != arg_count as usize {
+                if f.borrow().arg_count != arg_count as usize {
                     return Err(VmError::ArityMismatch {
-                        expected: f.arg_count,
+                        expected: f.borrow().arg_count,
                         actual: arg_count as usize,
                     });
                 }
 
                 let args = self.stack.pop_n(arg_count as usize)?;
-                self.stack.start_segment(None, FuncExecData{
-                    function: f,
-                    ip: 0,
-                });
+                self.stack
+                    .start_segment(None, FuncExecData { function: f, ip: 0 });
                 for arg in args {
                     self.stack.push(arg)?;
                 }
             }
-            Ret =>  {
+            Ret => {
                 let retval = self.stack.pop()?;
                 if self.stack.link_len() == 1 {
                     return Ok(StepResult::Done(retval));
@@ -160,17 +162,15 @@ impl Vm {
 fn basic_return_value() {
     use self::Instruction::*;
     use value::Value::*;
-    use function;
+    use function::{self, new_func};
 
-    let function = function::Function {
+    let function = new_func(function::Function {
+        name: Some("adder".into()),
         arg_count: 0,
-        instructions: vec![
-            Push(Integer(1)),
-            Ret
-        ],
-    };
+        instructions: vec![Push(Integer(1)), Ret],
+    });
 
-    let mut vm = Vm::new(Rc::new(function));
+    let mut vm = Vm::new(function);
     let mut vm2 = vm.clone();
 
     assert_eq!(vm.step(), Ok(StepResult::Continue));
@@ -183,19 +183,15 @@ fn basic_return_value() {
 fn test_addition() {
     use self::Instruction::*;
     use value::Value::*;
-    use function;
+    use function::{self, new_func};
 
-    let function = function::Function {
+    let function = new_func(function::Function {
+        name: Some("adder".into()),
         arg_count: 0,
-        instructions: vec![
-            Push(Integer(5)),
-            Push(Integer(10)),
-            Add,
-            Ret
-        ]
-    };
+        instructions: vec![Push(Integer(5)), Push(Integer(10)), Add, Ret],
+    });
 
-    let mut vm = Vm::new(Rc::new(function));
+    let mut vm = Vm::new(function);
 
     assert_eq!(vm.run(), Ok(Integer(15)));
 }
@@ -204,17 +200,16 @@ fn test_addition() {
 fn test_function_call() {
     use self::Instruction::*;
     use value::Value::*;
-    use function;
+    use function::{self, new_func};
 
-    let adder = Rc::new(function::Function {
+    let adder = new_func(function::Function {
+        name: Some("adder".into()),
         arg_count: 2,
-        instructions: vec![
-            Add,
-            Ret
-        ]
+        instructions: vec![Add, Ret],
     });
 
-    let main = Rc::new(function::Function {
+    let main = new_func(function::Function {
+        name: Some("main".into()),
         arg_count: 0,
         instructions: vec![
             Push(Integer(5)),
@@ -222,10 +217,45 @@ fn test_function_call() {
             Push(Function(adder)),
             Push(Integer(2)),
             Call,
-            Ret
-        ]
+            Ret,
+        ],
     });
 
     let mut vm = Vm::new(main);
     assert_eq!(vm.run(), Ok(Integer(11)));
+}
+
+#[test]
+fn recursive_fn() {
+    use self::Instruction::*;
+    use value::Value::*;
+    use function::{self, new_func};
+
+    let nullfunc = new_func(function::Function {
+        name: Some("NULL".into()),
+        arg_count: 0,
+        instructions: vec![],
+    });
+
+    let recursive_infinite = new_func(function::Function {
+        name: Some("recursive infinite".into()),
+        arg_count: 0,
+        instructions: vec![
+            Push(Value::Function(nullfunc)),
+            Push(Value::Integer(0)),
+            Call
+        ],
+    });
+
+    if let &mut Push(ref mut f) = &mut recursive_infinite.borrow_mut().instructions[0] {
+        *f = Function(recursive_infinite.clone());
+    }
+
+    let mut vm = Vm::new(recursive_infinite);
+    for i in 0 .. 100 {
+        vm.step().unwrap();
+        vm.step().unwrap();
+        vm.step().unwrap();
+        assert_eq!(vm.stack.link_len(), i + 2);
+    }
 }
