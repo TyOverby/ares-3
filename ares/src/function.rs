@@ -1,7 +1,6 @@
 use vm::Instruction;
 use std::rc::Rc;
 use std::cell::RefCell;
-use value::Value;
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
 pub type FunctionPtr = Rc<RefCell<Function>>;
@@ -19,29 +18,15 @@ pub struct Function {
 
 impl Debug for Function {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
-        writeln!(f, "Function {{")?;
-        if let &Some(ref name) = &self.name {
-            writeln!(f, "  {}", name)?;
+        let name = if let &Some(ref n) = &self.name {
+            &n[..]
         } else {
-            writeln!(f, "  <no name>")?;
-        }
-        writeln!(f, "  {} arguments", self.arg_count)?;
-        writeln!(f, "  instructions: [")?;
-        for instr in &self.instructions {
-            match instr {
-                &Instruction::Push(Value::Function(ref funk)) => {
-                    if let &Some(ref name) = &funk.borrow().name {
-                        writeln!(f, "    Push(Value(function {:?}))", name)?;
-                    } else {
-                        writeln!(f, "    Push(Value(function <no name>))")?;
-                    }
-                }
-                other =>
-                    writeln!(f, "    {:?}", other)?,
-            }
-        }
-        writeln!(f, "  ]")?;
-        writeln!(f, "}}")?;
-        Ok(())
+            "<unnamed>"
+        };
+
+        f.debug_struct("Function")
+            .field("name", &name)
+            .field("arg_count", &self.arg_count)
+            .finish()
     }
 }

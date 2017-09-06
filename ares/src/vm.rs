@@ -2,10 +2,12 @@ use linked_stack::{LinkedStack, LinkedStackBehavior};
 use std::rc::Rc;
 use continuation;
 use function::FunctionPtr;
-use value::Value;
+use value::{Value, ValueKind};
+use std::fmt::{Debug, Formatter, Result as FmtResult};
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct Symbol(pub &'static str);
+
 
 pub type VmResult<T> = Result<T, VmError>;
 
@@ -34,7 +36,7 @@ pub enum VmError {
     CrossBoundary,
     ArityMismatch { actual: usize, expected: usize },
     TagNotFound(Symbol),
-    UnexpectedType(Value),
+    UnexpectedType { expected: ValueKind, found: Value },
     RanOutOfInstructions,
 }
 
@@ -86,7 +88,6 @@ impl Vm {
 
     pub fn run(&mut self) -> VmResult<Value> {
         loop {
-            println!("STEP");
             if let StepResult::Done(v) = self.step()? {
                 return Ok(v);
             }
@@ -113,6 +114,11 @@ impl Vm {
 
     fn apply_instr(&mut self, instruction: Instruction) -> VmResult<StepResult> {
         use self::Instruction::*;
+        {
+            let func = self.stack.aux_mut().function.borrow();
+            let name = func.name.as_ref().map(AsRef::as_ref).unwrap_or("<unnamed>");
+            println!("IN {:?} APPLYING {:?}", name, instruction);
+        }
 
         match instruction {
             Add => {
@@ -128,8 +134,7 @@ impl Vm {
                 self.stack.push(v)?;
             }
             Print => {
-                let v = self.stack.pop()?;
-                self.debug_values.push(v);
+                println!("{:?}", self.stack);
             }
             Call => {
                 let arg_count = self.stack.pop()?.to_int()?;
@@ -143,8 +148,10 @@ impl Vm {
                 }
 
                 let args = self.stack.pop_n(arg_count as usize)?;
-                self.stack
-                    .start_segment(None, FuncExecData { function: f, ip: 0 });
+                self.stack.start_segment(
+                    None,
+                    FuncExecData { function: f, ip: 0 },
+                );
                 for arg in args {
                     self.stack.push(arg)?;
                 }
@@ -159,52 +166,52 @@ impl Vm {
                 }
             }
             Reset => {
-                // The unique "identifier" for the reset
                 let symbol = self.stack.pop()?.to_symbol()?;
-                // The closure to execute underneath the reset
                 let closure = self.stack.pop()?.to_function()?;
-                // The reset closure must be argumentless
                 assert!(closure.borrow().arg_count == 0);
-                // Execute the reset closure using the symbol as the tag
-                // for the new segment.  This closure exec is easier than
-                // the above because it doesn't need to worry about argument
-                // passing.
+
                 self.stack.start_segment(
                     Some(symbol),
-                    FuncExecData{function: closure, ip: 0});
+                    FuncExecData {
+                        function: closure,
+                        ip: 0,
+                    },
+                );
             }
             Shift => {
-                // The paired symbol for the shift. (this should be the
-                // same as a symbol further up for a reset).
+                println!("BEFORE: {:?}", self.stack);
                 let symbol = self.stack.pop()?.to_symbol()?;
-                // The closure that is executed inside the shift
                 let closure = self.stack.pop()?.to_function()?;
-                // The shift closure takes exactly one argument (the closure)
                 assert!(closure.borrow().arg_count == 1);
 
-                // Split the stack on the symbol that we pulled out earlier.
                 let cont_stack = self.stack.split(symbol)?;
-                // Execute the shift closure with no tag
-                self.stack.start_segment(None, FuncExecData { function: closure, ip: 0 });
-                // The continuation is the argument to the closure.
-                self.stack.push(Value::Continuation(Rc::new(continuation::Continuation {
-                    stack: cont_stack
-                })))?;
+                println!("SPLIT LEFT: {:?}", self.stack);
+                self.stack.start_segment(
+                    None,
+                    FuncExecData {
+                        function: closure,
+                        ip: 0,
+                    },
+                );
+                self.stack.push(Value::Continuation(Rc::new(
+                    continuation::Continuation { stack: cont_stack },
+                )))?;
             }
-            Resume  => {
-                // The continuation is the first item
-                let cont = self.stack.pop()?.to_continuation()?;
-                // All continuations are resumed with a value.  This can be
-                // null if a continuation doesn't expect a value
+            Resume => {
                 let value = self.stack.pop()?;
-                // Reconnect the continuation stack.
+                let cont = self.stack.pop()?.to_continuation()?;
+
                 self.stack.connect(cont.stack.clone());
-                // The "value" of the continuation is the value that the
-                // continuation was resumed with
                 self.stack.push(value)?;
             }
         }
 
         Ok(StepResult::Continue)
+    }
+}
+
+impl Debug for Symbol {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        write!(f, "'{}", self.0)
     }
 }

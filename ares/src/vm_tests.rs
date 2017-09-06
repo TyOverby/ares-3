@@ -75,11 +75,7 @@ fn recursive_fn() {
     let recursive_infinite = new_func(function::Function {
         name: Some("recursive infinite".into()),
         arg_count: 0,
-        instructions: vec![
-            Push(Function(nullfunc)),
-            Push(Integer(0)),
-            Call
-        ],
+        instructions: vec![Push(Function(nullfunc)), Push(Integer(0)), Call],
     });
 
     if let &mut Push(ref mut f) = &mut recursive_infinite.borrow_mut().instructions[0] {
@@ -87,7 +83,7 @@ fn recursive_fn() {
     }
 
     let mut vm = Vm::new(recursive_infinite);
-    for i in 0 .. 100 {
+    for i in 0..100 {
         vm.step().unwrap();
         vm.step().unwrap();
         vm.step().unwrap();
@@ -100,21 +96,13 @@ fn reset_without_a_shift() {
     let inside_reset = new_func(function::Function {
         name: Some("inside reset".into()),
         arg_count: 0,
-        instructions: vec![
-            Push(Integer(1)),
-            Ret
-        ]
+        instructions: vec![Push(Integer(1)), Ret],
     });
 
     let main = new_func(function::Function {
         name: Some("main".into()),
         arg_count: 0,
-        instructions: vec![
-            Push(Function(inside_reset)),
-            Push(symval("hi")),
-            Reset,
-            Ret
-        ]
+        instructions: vec![Push(Function(inside_reset)), Push(symval("hi")), Reset, Ret],
     });
 
     let mut vm = Vm::new(main);
@@ -126,18 +114,13 @@ fn reset_with_an_id_shift() {
     let id = new_func(function::Function {
         name: Some("id".into()),
         arg_count: 1,
-        instructions: vec![Ret]
+        instructions: vec![Ret],
     });
 
     let reset_closure = new_func(function::Function {
         name: Some("reset closure".into()),
         arg_count: 0,
-        instructions: vec![
-            Push(Function(id)),
-            Push(symval("hi")),
-            Shift,
-            Ret,
-        ]
+        instructions: vec![Push(Function(id)), Push(symval("hi")), Shift, Ret],
     });
 
     let main = new_func(function::Function {
@@ -147,14 +130,15 @@ fn reset_with_an_id_shift() {
             Push(Function(reset_closure)),
             Push(symval("hi")),
             Reset,
-            Ret
-        ]
+            Ret,
+        ],
     });
 
     let mut vm = Vm::new(main);
     let v = vm.run();
-    if let &Ok(Value::Continuation(_)) = &v { /* good*/ }
-    else {
+    if let &Ok(Value::Continuation(_)) = &v {
+        /* good*/
+    } else {
         panic!("not a continuation!: {:?}", v);
     }
 
@@ -162,12 +146,50 @@ fn reset_with_an_id_shift() {
         name: Some("main2".into()),
         arg_count: 0,
         instructions: vec![
-            Push(Integer(5)),
             Push(v.unwrap()),
+            Push(Integer(5)),
             Resume,
-            Ret,
-        ]
+            Ret],
     });
     let mut vm = Vm::new(new_main);
     assert_eq!(vm.run(), Ok(Integer(5)));
+}
+
+#[test]
+fn reset_using_shift_expression() {
+    let id = new_func(function::Function {
+        name: Some("id".into()),
+        arg_count: 1,
+        instructions: vec![Ret],
+    });
+
+    let reset_closure = new_func(function::Function {
+        name: Some("reset closure".into()),
+        arg_count: 0,
+        instructions: vec![
+            Push(Integer(10)),
+            Push(Function(id)),
+            Push(symval("hi")),
+            Shift,
+            Add,
+            Ret,
+        ],
+    });
+
+    let main = new_func(function::Function {
+        name: Some("main2".into()),
+        arg_count: 0,
+        instructions: vec![
+            Push(Function(reset_closure)),
+            Push(symval("hi")),
+            Reset,
+
+            Push(Integer(5)),
+            Resume,
+            Ret,
+        ],
+    });
+
+    let mut vm = Vm::new(main);
+    assert_eq!(vm.run(), Ok(Integer(15)));
 }

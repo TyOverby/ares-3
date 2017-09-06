@@ -25,14 +25,22 @@ where T: Debug, K: Debug, A: Debug {
         if let Some(prev) = self.previous.as_ref() {
             Debug::fmt(prev, f)?;
         }
-        writeln!(f, "---------------------")?;
-        writeln!(f, "tag: {:?}", self.tag)?;
-        writeln!(f, "aux: {:?}", self.aux)?;
-        writeln!(f, "values: [")?;
-        for v in &self.current {
-            writeln!(f,  "{:?},", v)?;
+        if let &Some(ref tag) = &self.tag {
+            write!(f, "{:?} [", tag)?;
+        } else {
+            write!(f, "[")?;
         }
-        writeln!(f, "]")?;
+        if f.alternate() {
+            writeln!(f, "")?;
+        }
+        for v in &self.current {
+            if f.alternate() {
+                writeln!(f, "{:?},", v)?;
+            } else {
+                write!(f, "{:?},", v)?;
+            }
+        }
+        write!(f, "]")?;
 
         Ok(())
     }
@@ -151,7 +159,13 @@ impl <T, K, A, B: LinkedStackBehavior<Symbol=K>> LinkedStack<T, K, A, B> {
             }
         }
 
-        split_impl(self, tag).map(|a| *a).or_else(|tag| Err(B::tag_not_found(tag)))
+        let result = split_impl(self, tag).map(|a| *a).or_else(|tag| Err(B::tag_not_found(tag)));
+        if let Ok(mut res) = result {
+            std::mem::swap(self, &mut res);
+            return Ok(res)
+        } else {
+            return result
+        }
     }
 
     pub fn connect(&mut self, mut additional: LinkedStack<T, K, A, B>) {
@@ -263,5 +277,19 @@ mod test {
         stack1.connect(stack2);
 
         assert_eq!(stack1.pop(), Ok(2));
+    }
+
+    #[test]
+    fn test_split() {
+        let mut stack: TestLinkedStack = LinkedStack::new("hi");
+        stack.start_segment(Some("x"), "");
+        stack.start_segment(Some("y"), "");
+        stack.start_segment(Some("z"), "");
+
+        let after = stack.split(&"y").unwrap();
+        assert_eq!(stack.link_len(), 2);
+        assert_eq!(after.link_len(), 2);
+
+        assert_eq!(stack.tag,  Some("x"));
     }
 }
