@@ -2,12 +2,11 @@ use linked_stack::{LinkedStack, LinkedStackBehavior};
 use std::rc::Rc;
 use continuation;
 use function::FunctionPtr;
-use value::{Value, ValueKind, AresMap};
+use value::{Value, ValueKind, AresMap, AresObj};
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Symbol(pub &'static str);
-
 
 pub type VmResult<T> = Result<T, VmError>;
 
@@ -35,6 +34,7 @@ pub enum VmError {
     StackOverflow,
     CrossBoundary,
     KeyNotFound(Value),
+    FieldNotFound(Symbol),
     ArityMismatch { actual: usize, expected: usize },
     TagNotFound(Symbol),
     UnexpectedType { expected: ValueKind, found: Value },
@@ -51,10 +51,15 @@ pub enum Instruction {
     Ret,
     Reset,
     Shift,
+    Resume,
+
     MapEmpty,
     MapInsert,
     MapGet,
-    Resume,
+
+    ObjEmpty,
+    ObjInsert,
+    ObjGet,
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -133,6 +138,27 @@ impl Vm {
             Push(v) => {
                 self.stack.push(v)?;
             }
+
+            ObjEmpty => {
+                self.stack.push(Value::Obj(AresObj::new()))?;
+            }
+            ObjInsert => {
+                let obj = self.stack.pop()?.to_obj()?;
+                let v = self.stack.pop()?;
+                let k = self.stack.pop()?.to_symbol()?;
+                let obj = obj .plus(k, v);
+                self.stack.push(Value::Obj(obj))?;
+            }
+            ObjGet => {
+                let k = self.stack.pop()?.to_symbol()?;
+                let obj = self.stack.pop()?.to_obj()?;
+                if let Some(v) = obj.find(&k) {
+                    self.stack.push(v.clone())?;
+                } else {
+                    return Err(VmError::FieldNotFound(k));
+                }
+            }
+
             MapEmpty => {
                 self.stack.push(Value::Map(AresMap::new()))?;
             }

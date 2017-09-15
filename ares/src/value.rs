@@ -6,6 +6,7 @@ use hamt_rs::{HamtMap, CopyStore};
 use std::hash::{Hash, Hasher};
 
 pub type AresMap = HamtMap<Value, Value, CopyStore<Value, Value>>;
+pub type AresObj = HamtMap<Symbol, Value, CopyStore<Symbol, Value>>;
 
 #[derive(Clone, PartialEq)]
 pub enum Value {
@@ -15,6 +16,7 @@ pub enum Value {
     Function(FunctionPtr),
     Continuation(ContinuationPtr),
     Map(AresMap),
+    Obj(AresObj),
 }
 
 impl Hash for Value {
@@ -30,6 +32,7 @@ impl Hash for Value {
 
             &Value::Function(_) |
             &Value::Continuation(_) |
+            &Value::Obj(_) |
             &Value::Map(_) => {
                 unimplemented!();
             }
@@ -46,6 +49,7 @@ pub enum ValueKind {
     Function,
     Continuation,
     Map,
+    Obj,
 }
 
 impl Debug for Value {
@@ -62,9 +66,16 @@ impl Debug for Value {
                     write!(f, "<continuation>")
                 }
             }
-            &Value::Map(ref m) => {
-                write!(f, "{{")?;
-                for (k, v) in m.iter() {
+            &Value::Obj(ref o) => {
+                write!(f, "Object {{")?;
+                for (&Symbol(k), v) in o.iter() {
+                    write!(f, "{:?}: {:?},", k, v)?;
+                }
+                write!(f, "}}")
+            }
+            &Value::Map(ref o) => {
+                write!(f, "Map {{")?;
+                for (k, v) in o.iter() {
                     write!(f, "{:?}: {:?},", k, v)?;
                 }
                 write!(f, "}}")
@@ -137,6 +148,16 @@ impl Value {
         }
     }
 
+    pub fn to_obj(self) -> VmResult<AresObj> {
+        match self {
+            Value::Obj(c) => Ok(c),
+            other => Err(VmError::UnexpectedType {
+                found: other,
+                expected: ValueKind::Obj,
+            }),
+        }
+    }
+
     //
     // AS
     //
@@ -196,6 +217,16 @@ impl Value {
             other => Err(VmError::UnexpectedType {
                 found: other.clone(),
                 expected: ValueKind::Map,
+            }),
+        }
+    }
+
+    pub fn as_obj(&self) -> VmResult<&AresObj> {
+        match self {
+            &Value::Obj(ref c) => Ok(c),
+            other => Err(VmError::UnexpectedType {
+                found: other.clone(),
+                expected: ValueKind::Obj,
             }),
         }
     }

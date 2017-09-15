@@ -2,7 +2,7 @@ use vm::*;
 use vm;
 use self::Instruction::*;
 use value::Value::*;
-use value::{Value, AresMap};
+use value::{Value, AresMap, AresObj};
 use function::{self, new_func};
 
 fn symval(v: &'static str) -> Value {
@@ -25,6 +25,76 @@ fn basic_return_value() {
 
     assert_eq!(vm2.run(), Ok(Integer(1)));
 }
+
+#[test]
+fn empty_obj() {
+    let function = new_func(function::Function {
+        name: Some("empty_map".into()),
+        arg_count: 0,
+        instructions: vec![ObjEmpty, Ret],
+    });
+
+    let mut vm = Vm::new(function);
+    assert_eq!(vm.run(), Ok(Obj(AresObj::new())));
+}
+
+#[test]
+fn obj_with_some_adds() {
+    let function = new_func(function::Function {
+        name: Some("empty_map".into()),
+        arg_count: 0,
+        instructions: vec![
+            Push(Value::Symbol(vm::Symbol("hi"))),
+            Push(Integer(5)),
+            ObjEmpty,
+            ObjInsert,
+            Ret,
+        ],
+    });
+
+    let mut vm = Vm::new(function);
+    let obj = AresObj::new().plus(vm::Symbol("hi"), Value::Integer(5));
+    assert_eq!(vm.run(), Ok(Obj(obj)));
+}
+
+#[test]
+fn obj_get() {
+    let function = new_func(function::Function {
+        name: Some("empty_symbol".into()),
+        arg_count: 0,
+        instructions: vec![
+            Push(Value::Symbol(vm::Symbol("hi"))),
+            Push(Value::Integer(5)),
+            ObjEmpty,
+            ObjInsert,
+            Push(Value::Symbol(vm::Symbol("hi"))),
+            ObjGet,
+            Ret,
+        ],
+    });
+
+    let mut vm = Vm::new(function);
+    assert_eq!(vm.run(), Ok(Integer(5)));
+}
+
+#[test]
+fn bad_obj_get() {
+    let function = new_func(function::Function {
+        name: Some("empty_map".into()),
+        arg_count: 0,
+        instructions: vec![
+            ObjEmpty,
+            Push(Value::Symbol(vm::Symbol("hi"))),
+            ObjGet,
+            Ret,
+        ],
+    });
+
+    let mut vm = Vm::new(function);
+    assert_eq!(vm.run(), Err(VmError::FieldNotFound(vm::Symbol("hi"))));
+}
+
+// STOP HERE
 
 #[test]
 fn empty_map() {
