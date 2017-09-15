@@ -2,7 +2,7 @@ use vm::*;
 use vm;
 use self::Instruction::*;
 use value::Value::*;
-use value::Value;
+use value::{Value, AresMap};
 use function::{self, new_func};
 
 fn symval(v: &'static str) -> Value {
@@ -24,6 +24,74 @@ fn basic_return_value() {
     assert_eq!(vm.step(), Ok(StepResult::Done(Integer(1))));
 
     assert_eq!(vm2.run(), Ok(Integer(1)));
+}
+
+#[test]
+fn empty_map() {
+    let function = new_func(function::Function {
+        name: Some("empty_map".into()),
+        arg_count: 0,
+        instructions: vec![MapEmpty, Ret],
+    });
+
+    let mut vm = Vm::new(function);
+    assert_eq!(vm.run(), Ok(Map(AresMap::new())));
+}
+
+#[test]
+fn map_with_some_adds() {
+    let function = new_func(function::Function {
+        name: Some("empty_map".into()),
+        arg_count: 0,
+        instructions: vec![
+            Push(Value::Integer(20)),
+            Push(Value::Integer(5)),
+            MapEmpty,
+            MapInsert,
+            Ret,
+        ],
+    });
+
+    let mut vm = Vm::new(function);
+    let map = AresMap::new().plus(Value::Integer(20), Value::Integer(5));
+    assert_eq!(vm.run(), Ok(Map(map)));
+}
+
+#[test]
+fn map_get() {
+    let function = new_func(function::Function {
+        name: Some("empty_map".into()),
+        arg_count: 0,
+        instructions: vec![
+            Push(Value::Integer(20)),
+            Push(Value::Integer(5)),
+            MapEmpty,
+            MapInsert,
+            Push(Value::Integer(20)),
+            MapGet,
+            Ret,
+        ],
+    });
+
+    let mut vm = Vm::new(function);
+    assert_eq!(vm.run(), Ok(Integer(5)));
+}
+
+#[test]
+fn bad_map_get() {
+    let function = new_func(function::Function {
+        name: Some("empty_map".into()),
+        arg_count: 0,
+        instructions: vec![
+            MapEmpty,
+            Push(Value::Integer(20)),
+            MapGet,
+            Ret,
+        ],
+    });
+
+    let mut vm = Vm::new(function);
+    assert_eq!(vm.run(), Err(VmError::KeyNotFound(Value::Integer(20))));
 }
 
 #[test]

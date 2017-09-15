@@ -2,6 +2,10 @@ use vm::{Symbol, VmError, VmResult};
 use function::FunctionPtr;
 use continuation::ContinuationPtr;
 use std::fmt::{Debug, Formatter, Result as FmtResult};
+use hamt_rs::{HamtMap, CopyStore};
+use std::hash::{Hash, Hasher};
+
+pub type AresMap = HamtMap<Value, Value, CopyStore<Value, Value>>;
 
 #[derive(Clone, PartialEq)]
 pub enum Value {
@@ -10,7 +14,29 @@ pub enum Value {
     Symbol(Symbol),
     Function(FunctionPtr),
     Continuation(ContinuationPtr),
+    Map(AresMap),
 }
+
+impl Hash for Value {
+    fn hash<H>(&self, state: &mut H)
+    where H: Hasher {
+        match self {
+            &Value::Integer(i) => i.hash(state),
+            &Value::Float(f) => {
+                let as_i: u64 = unsafe { ::std::mem::transmute(f) };
+                as_i.hash(state);
+            }
+            &Value::Symbol(ref s) => s.hash(state),
+
+            &Value::Function(_) |
+            &Value::Continuation(_) |
+            &Value::Map(_) => {
+                unimplemented!();
+            }
+        }
+    }
+}
+impl Eq for Value {}
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum ValueKind {
@@ -19,6 +45,7 @@ pub enum ValueKind {
     Symbol,
     Function,
     Continuation,
+    Map,
 }
 
 impl Debug for Value {
@@ -34,6 +61,13 @@ impl Debug for Value {
                 } else {
                     write!(f, "<continuation>")
                 }
+            }
+            &Value::Map(ref m) => {
+                write!(f, "{{")?;
+                for (k, v) in m.iter() {
+                    write!(f, "{:?}: {:?},", k, v)?;
+                }
+                write!(f, "}}")
             }
         }
     }
@@ -93,6 +127,16 @@ impl Value {
         }
     }
 
+    pub fn to_map(self) -> VmResult<AresMap> {
+        match self {
+            Value::Map(c) => Ok(c),
+            other => Err(VmError::UnexpectedType {
+                found: other,
+                expected: ValueKind::Map,
+            }),
+        }
+    }
+
     //
     // AS
     //
@@ -142,6 +186,16 @@ impl Value {
             other => Err(VmError::UnexpectedType {
                 found: other.clone(),
                 expected: ValueKind::Continuation,
+            }),
+        }
+    }
+
+    pub fn as_map(&self) -> VmResult<&AresMap> {
+        match self {
+            &Value::Map(ref c) => Ok(c),
+            other => Err(VmError::UnexpectedType {
+                found: other.clone(),
+                expected: ValueKind::Map,
             }),
         }
     }

@@ -2,10 +2,10 @@ use linked_stack::{LinkedStack, LinkedStackBehavior};
 use std::rc::Rc;
 use continuation;
 use function::FunctionPtr;
-use value::{Value, ValueKind};
+use value::{Value, ValueKind, AresMap};
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Symbol(pub &'static str);
 
 
@@ -34,6 +34,7 @@ pub enum VmError {
     StackUnderflow,
     StackOverflow,
     CrossBoundary,
+    KeyNotFound(Value),
     ArityMismatch { actual: usize, expected: usize },
     TagNotFound(Symbol),
     UnexpectedType { expected: ValueKind, found: Value },
@@ -50,6 +51,9 @@ pub enum Instruction {
     Ret,
     Reset,
     Shift,
+    MapEmpty,
+    MapInsert,
+    MapGet,
     Resume,
 }
 
@@ -128,6 +132,25 @@ impl Vm {
             }
             Push(v) => {
                 self.stack.push(v)?;
+            }
+            MapEmpty => {
+                self.stack.push(Value::Map(AresMap::new()))?;
+            }
+            MapInsert => {
+                let map = self.stack.pop()?.to_map()?;
+                let v = self.stack.pop()?;
+                let k = self.stack.pop()?;
+                let map = map.plus(k, v);
+                self.stack.push(Value::Map(map))?;
+            }
+            MapGet => {
+                let k = self.stack.pop()?;
+                let map = self.stack.pop()?.to_map()?;
+                if let Some(v) = map.find(&k) {
+                    self.stack.push(v.clone())?;
+                } else {
+                    return Err(VmError::KeyNotFound(k));
+                }
             }
             Dup => {
                 let v = self.stack.peek()?.clone();
