@@ -2,7 +2,7 @@ use linked_stack::{LinkedStack, LinkedStackBehavior};
 use std::rc::Rc;
 use continuation;
 use function::FunctionPtr;
-use value::{Value, ValueKind, AresMap, AresObj};
+use value::{AresMap, AresObj, Value, ValueKind};
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -104,7 +104,6 @@ impl Vm {
     }
 
     pub fn step(&mut self) -> VmResult<StepResult> {
-
         let instruction = {
             let &FuncExecData {
                 ref function,
@@ -146,7 +145,7 @@ impl Vm {
                 let obj = self.stack.pop()?.to_obj()?;
                 let v = self.stack.pop()?;
                 let k = self.stack.pop()?.to_symbol()?;
-                let obj = obj .plus(k, v);
+                let obj = obj.plus(k, v);
                 self.stack.push(Value::Obj(obj))?;
             }
             ObjGet => {
@@ -197,10 +196,8 @@ impl Vm {
                 }
 
                 let args = self.stack.pop_n(arg_count as usize)?;
-                self.stack.start_segment(
-                    None,
-                    FuncExecData { function: f, ip: 0 },
-                );
+                self.stack
+                    .start_segment(None, FuncExecData { function: f, ip: 0 });
                 for arg in args {
                     self.stack.push(arg)?;
                 }
@@ -228,13 +225,11 @@ impl Vm {
                 );
             }
             Shift => {
-                println!("BEFORE: {:?}", self.stack);
                 let symbol = self.stack.pop()?.to_symbol()?;
                 let closure = self.stack.pop()?.to_function()?;
                 assert!(closure.borrow().arg_count == 1);
 
                 let cont_stack = self.stack.split(symbol)?;
-                println!("SPLIT LEFT: {:?}", self.stack);
                 self.stack.start_segment(
                     None,
                     FuncExecData {
@@ -242,9 +237,9 @@ impl Vm {
                         ip: 0,
                     },
                 );
-                self.stack.push(Value::Continuation(Rc::new(
-                    continuation::Continuation { stack: cont_stack },
-                )))?;
+                self.stack.push(Value::Continuation(
+                    Rc::new(continuation::Continuation { stack: cont_stack }),
+                ))?;
             }
             Resume => {
                 let value = self.stack.pop()?;

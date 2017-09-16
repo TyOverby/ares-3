@@ -2,7 +2,7 @@ use vm::{Symbol, VmError, VmResult};
 use function::FunctionPtr;
 use continuation::ContinuationPtr;
 use std::fmt::{Debug, Formatter, Result as FmtResult};
-use hamt_rs::{HamtMap, CopyStore};
+use hamt_rs::{CopyStore, HamtMap};
 use std::hash::{Hash, Hasher};
 
 pub type AresMap = HamtMap<Value, Value, CopyStore<Value, Value>>;
@@ -21,7 +21,9 @@ pub enum Value {
 
 impl Hash for Value {
     fn hash<H>(&self, state: &mut H)
-    where H: Hasher {
+    where
+        H: Hasher,
+    {
         match self {
             &Value::Integer(i) => i.hash(state),
             &Value::Float(f) => {
@@ -30,10 +32,7 @@ impl Hash for Value {
             }
             &Value::Symbol(ref s) => s.hash(state),
 
-            &Value::Function(_) |
-            &Value::Continuation(_) |
-            &Value::Obj(_) |
-            &Value::Map(_) => {
+            &Value::Function(_) | &Value::Continuation(_) | &Value::Obj(_) | &Value::Map(_) => {
                 unimplemented!();
             }
         }
@@ -59,13 +58,11 @@ impl Debug for Value {
             &Value::Float(n) => write!(f, "{}f64", n),
             &Value::Symbol(Symbol(s)) => write!(f, "'{}", s),
             &Value::Function(ref c) => write!(f, "{:?}", c.borrow()),
-            &Value::Continuation(ref c) => {
-                if f.alternate() {
-                    write!(f, "{:?}", c)
-                } else {
-                    write!(f, "<continuation>")
-                }
-            }
+            &Value::Continuation(ref c) => if f.alternate() {
+                write!(f, "{:?}", c)
+            } else {
+                write!(f, "<continuation>")
+            },
             &Value::Obj(ref o) => {
                 write!(f, "Object {{")?;
                 for (&Symbol(k), v) in o.iter() {
@@ -85,6 +82,57 @@ impl Debug for Value {
 }
 
 impl Value {
+    //
+    // Is
+    //
+    pub fn is_int(&self) -> bool {
+        match self {
+            &Value::Integer(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_float(&self) -> bool {
+        match self {
+            &Value::Float(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_symbol(&self) -> bool {
+        match self {
+            &Value::Symbol(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_function(&self) -> bool {
+        match self {
+            &Value::Function(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_continuation(&self) -> bool {
+        match self {
+            &Value::Continuation(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_map(&self) -> bool {
+        match self {
+            &Value::Map(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_obj(&self) -> bool {
+        match self {
+            &Value::Obj(_) => true,
+            _ => false,
+        }
+    }
     //
     // TO
     //

@@ -1,5 +1,6 @@
-extern crate linked_stack;
+
 extern crate hamt_rs;
+extern crate linked_stack;
 
 pub mod value;
 pub mod vm;

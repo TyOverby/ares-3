@@ -2,7 +2,7 @@ use vm::*;
 use vm;
 use self::Instruction::*;
 use value::Value::*;
-use value::{Value, AresMap, AresObj};
+use value::{AresMap, AresObj, Value};
 use function::{self, new_func};
 
 fn symval(v: &'static str) -> Value {
@@ -82,12 +82,7 @@ fn bad_obj_get() {
     let function = new_func(function::Function {
         name: Some("empty_map".into()),
         arg_count: 0,
-        instructions: vec![
-            ObjEmpty,
-            Push(Value::Symbol(vm::Symbol("hi"))),
-            ObjGet,
-            Ret,
-        ],
+        instructions: vec![ObjEmpty, Push(Value::Symbol(vm::Symbol("hi"))), ObjGet, Ret],
     });
 
     let mut vm = Vm::new(function);
@@ -152,12 +147,7 @@ fn bad_map_get() {
     let function = new_func(function::Function {
         name: Some("empty_map".into()),
         arg_count: 0,
-        instructions: vec![
-            MapEmpty,
-            Push(Value::Integer(20)),
-            MapGet,
-            Ret,
-        ],
+        instructions: vec![MapEmpty, Push(Value::Integer(20)), MapGet, Ret],
     });
 
     let mut vm = Vm::new(function);
@@ -274,20 +264,12 @@ fn reset_with_an_id_shift() {
 
     let mut vm = Vm::new(main);
     let v = vm.run();
-    if let &Ok(Value::Continuation(_)) = &v {
-        /* good*/
-    } else {
-        panic!("not a continuation!: {:?}", v);
-    }
+    assert!(v.as_ref().unwrap().is_continuation());
 
     let new_main = new_func(function::Function {
         name: Some("main2".into()),
         arg_count: 0,
-        instructions: vec![
-            Push(v.unwrap()),
-            Push(Integer(5)),
-            Resume,
-            Ret],
+        instructions: vec![Push(v.unwrap()), Push(Integer(5)), Resume, Ret],
     });
     let mut vm = Vm::new(new_main);
     assert_eq!(vm.run(), Ok(Integer(5)));
@@ -321,7 +303,6 @@ fn reset_using_shift_expression() {
             Push(Function(reset_closure)),
             Push(symval("hi")),
             Reset,
-
             Push(Integer(5)),
             Resume,
             Ret,
