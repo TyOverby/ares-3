@@ -72,7 +72,13 @@ impl Debug for Value {
             Value::Integer(i) => write!(f, "{}i64", i),
             Value::Float(n) => write!(f, "{}f64", n),
             Value::Symbol(Symbol(s)) => write!(f, "'{}", s),
-            Value::Function(ref c) => write!(f, "{:?}", c.borrow()),
+            Value::Function(ref c) => if f.alternate() {
+                write!(f, "{:?}", c.borrow())
+            } else {
+                let func = c.borrow();
+                let name = func.name.as_ref().map(|s| s.as_ref());
+                write!(f, "function {}", name.unwrap_or("<unnamed>"))
+            },
             Value::Continuation(ref c) => if f.alternate() {
                 write!(f, "{:?}", c)
             } else {
@@ -80,15 +86,33 @@ impl Debug for Value {
             },
             Value::Obj(ref o) => {
                 write!(f, "Object {{")?;
+                if f.alternate() {
+                    write!(f, "\n")?
+                }
                 for (&Symbol(k), v) in o.iter() {
                     write!(f, "{:?}: {:?},", k, v)?;
+                    if f.alternate() {
+                        write!(f, "\n")?
+                    }
+                }
+                if f.alternate() {
+                    write!(f, "\n")?
                 }
                 write!(f, "}}")
             }
             Value::Map(ref o) => {
                 write!(f, "Map {{")?;
+                if f.alternate() {
+                    write!(f, "\n")?
+                }
                 for (k, v) in o.iter() {
                     write!(f, "{:?}: {:?},", k, v)?;
+                    if f.alternate() {
+                        write!(f, "\n")?
+                    }
+                }
+                if f.alternate() {
+                    write!(f, "\n")?
                 }
                 write!(f, "}}")
             }
