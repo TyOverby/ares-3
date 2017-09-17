@@ -18,7 +18,7 @@ pub struct Function {
 
 impl Debug for Function {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
-        let name = if let &Some(ref n) = &self.name {
+        let name = if let Some(ref n) = self.name {
             &n[..]
         } else {
             "<unnamed>"

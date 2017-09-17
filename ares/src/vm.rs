@@ -82,7 +82,7 @@ pub enum StepResult {
 
 impl Vm {
     pub fn new(function: FunctionPtr) -> Vm {
-        assert!(function.borrow().arg_count == 0);
+        assert_eq!(function.borrow().arg_count, 0);
 
         let exec_data = FuncExecData {
             function: function,
@@ -122,16 +122,10 @@ impl Vm {
 
     fn apply_instr(&mut self, instruction: Instruction) -> VmResult<StepResult> {
         use self::Instruction::*;
-        {
-            let func = self.stack.aux_mut().function.borrow();
-            let name = func.name.as_ref().map(AsRef::as_ref).unwrap_or("<unnamed>");
-            println!("IN {:?} APPLYING {:?}", name, instruction);
-        }
-
         match instruction {
             Add => {
-                let l = self.stack.pop()?.to_int()?;
-                let r = self.stack.pop()?.to_int()?;
+                let l = self.stack.pop()?.into_int()?;
+                let r = self.stack.pop()?.into_int()?;
                 self.stack.push(Value::Integer(l + r))?;
             }
             Push(v) => {
@@ -142,15 +136,15 @@ impl Vm {
                 self.stack.push(Value::Obj(AresObj::new()))?;
             }
             ObjInsert => {
-                let obj = self.stack.pop()?.to_obj()?;
+                let obj = self.stack.pop()?.into_obj()?;
                 let v = self.stack.pop()?;
-                let k = self.stack.pop()?.to_symbol()?;
+                let k = self.stack.pop()?.into_symbol()?;
                 let obj = obj.plus(k, v);
                 self.stack.push(Value::Obj(obj))?;
             }
             ObjGet => {
-                let k = self.stack.pop()?.to_symbol()?;
-                let obj = self.stack.pop()?.to_obj()?;
+                let k = self.stack.pop()?.into_symbol()?;
+                let obj = self.stack.pop()?.into_obj()?;
                 if let Some(v) = obj.find(&k) {
                     self.stack.push(v.clone())?;
                 } else {
@@ -162,7 +156,7 @@ impl Vm {
                 self.stack.push(Value::Map(AresMap::new()))?;
             }
             MapInsert => {
-                let map = self.stack.pop()?.to_map()?;
+                let map = self.stack.pop()?.into_map()?;
                 let v = self.stack.pop()?;
                 let k = self.stack.pop()?;
                 let map = map.plus(k, v);
@@ -170,7 +164,7 @@ impl Vm {
             }
             MapGet => {
                 let k = self.stack.pop()?;
-                let map = self.stack.pop()?.to_map()?;
+                let map = self.stack.pop()?.into_map()?;
                 if let Some(v) = map.find(&k) {
                     self.stack.push(v.clone())?;
                 } else {
@@ -185,8 +179,8 @@ impl Vm {
                 println!("{:?}", self.stack);
             }
             Call => {
-                let arg_count = self.stack.pop()?.to_int()?;
-                let f = self.stack.pop()?.to_function()?;
+                let arg_count = self.stack.pop()?.into_int()?;
+                let f = self.stack.pop()?.into_function()?;
 
                 if f.borrow().arg_count != arg_count as usize {
                     return Err(VmError::ArityMismatch {
@@ -196,8 +190,8 @@ impl Vm {
                 }
 
                 let args = self.stack.pop_n(arg_count as usize)?;
-                self.stack
-                    .start_segment(None, FuncExecData { function: f, ip: 0 });
+                let exec_data = FuncExecData { function: f, ip: 0 };
+                self.stack.start_segment(None, exec_data);
                 for arg in args {
                     self.stack.push(arg)?;
                 }
@@ -212,22 +206,20 @@ impl Vm {
                 }
             }
             Reset => {
-                let symbol = self.stack.pop()?.to_symbol()?;
-                let closure = self.stack.pop()?.to_function()?;
-                assert!(closure.borrow().arg_count == 0);
+                let symbol = self.stack.pop()?.into_symbol()?;
+                let closure = self.stack.pop()?.into_function()?;
+                assert_eq!(closure.borrow().arg_count, 0);
 
-                self.stack.start_segment(
-                    Some(symbol),
-                    FuncExecData {
-                        function: closure,
-                        ip: 0,
-                    },
-                );
+                let exec_data = FuncExecData {
+                    function: closure,
+                    ip: 0,
+                };
+                self.stack.start_segment(Some(symbol), exec_data);
             }
             Shift => {
-                let symbol = self.stack.pop()?.to_symbol()?;
-                let closure = self.stack.pop()?.to_function()?;
-                assert!(closure.borrow().arg_count == 1);
+                let symbol = self.stack.pop()?.into_symbol()?;
+                let closure = self.stack.pop()?.into_function()?;
+                assert_eq!(closure.borrow().arg_count, 1);
 
                 let cont_stack = self.stack.split(symbol)?;
                 self.stack.start_segment(
@@ -237,13 +229,12 @@ impl Vm {
                         ip: 0,
                     },
                 );
-                self.stack.push(Value::Continuation(
-                    Rc::new(continuation::Continuation { stack: cont_stack }),
-                ))?;
+                let cont = Rc::new(continuation::Continuation { stack: cont_stack });
+                self.stack.push(Value::Continuation(cont))?;
             }
             Resume => {
                 let value = self.stack.pop()?;
-                let cont = self.stack.pop()?.to_continuation()?;
+                let cont = self.stack.pop()?.into_continuation()?;
 
                 self.stack.connect(cont.stack.clone());
                 self.stack.push(value)?;

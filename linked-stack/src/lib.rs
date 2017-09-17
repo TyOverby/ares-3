@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::mem::swap;
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
 pub trait LinkedStackBehavior {
@@ -19,8 +20,12 @@ pub struct LinkedStack<T, K, A, B: LinkedStackBehavior> {
     _phantom: PhantomData<B>,
 }
 
-impl <T, K, A, B: LinkedStackBehavior> Debug for LinkedStack<T, K, A, B>
-where T: Debug, K: Debug, A: Debug {
+impl<T, K, A, B: LinkedStackBehavior> Debug for LinkedStack<T, K, A, B>
+where
+    T: Debug,
+    K: Debug,
+    A: Debug,
+{
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         if let Some(prev) = self.previous.as_ref() {
             Debug::fmt(prev, f)?;
@@ -46,7 +51,7 @@ where T: Debug, K: Debug, A: Debug {
     }
 }
 
-impl <T, K, A, B: LinkedStackBehavior<Symbol=K>> LinkedStack<T, K, A, B> {
+impl<T, K, A, B: LinkedStackBehavior<Symbol = K>> LinkedStack<T, K, A, B> {
     pub fn new(aux: A) -> LinkedStack<T, K, A, B> {
         LinkedStack {
             tag: None,
@@ -101,7 +106,7 @@ impl <T, K, A, B: LinkedStackBehavior<Symbol=K>> LinkedStack<T, K, A, B> {
         if let Some(r) = self.current.last() {
             return Ok(r);
         }
-        return Err(B::underflow())
+        return Err(B::underflow());
     }
 
     pub fn pop(&mut self) -> Result<T, B::Error> {
@@ -114,9 +119,9 @@ impl <T, K, A, B: LinkedStackBehavior<Symbol=K>> LinkedStack<T, K, A, B> {
 
     // TODO: Optimization oporitunity
     pub fn pop_n(&mut self, n: usize) -> Result<Vec<T>, B::Error> {
-        let mut  v = Vec::with_capacity(n);
+        let mut v = Vec::with_capacity(n);
 
-        for _ in 0 .. n {
+        for _ in 0..n {
             v.push(self.pop()?)
         }
 
@@ -124,8 +129,7 @@ impl <T, K, A, B: LinkedStackBehavior<Symbol=K>> LinkedStack<T, K, A, B> {
     }
 
     pub fn start_segment(&mut self, tag: Option<K>, aux: A) {
-        use std::mem::swap;
-        let mut new = LinkedStack{
+        let mut new = LinkedStack {
             tag: tag,
             aux: aux,
             current: vec![],
@@ -145,8 +149,17 @@ impl <T, K, A, B: LinkedStackBehavior<Symbol=K>> LinkedStack<T, K, A, B> {
         }
     }
 
-    pub fn split(&mut self, tag: K) -> Result<LinkedStack<T, K, A, B>, B::Error> where K: Eq {
-        fn split_impl<T, K, A, B: LinkedStackBehavior>(location: &mut LinkedStack<T, K, A, B>, tag: K) -> Result<Box<LinkedStack<T, K, A, B>>, K> where K: Eq {
+    pub fn split(&mut self, tag: K) -> Result<LinkedStack<T, K, A, B>, B::Error>
+    where
+        K: Eq,
+    {
+        fn split_impl<T, K, A, B: LinkedStackBehavior>(
+            location: &mut LinkedStack<T, K, A, B>,
+            tag: K,
+        ) -> Result<Box<LinkedStack<T, K, A, B>>, K>
+        where
+            K: Eq,
+        {
             if location.tag.as_ref() == Some(&tag) {
                 match location.previous.take() {
                     Some(loc) => Ok(loc),
@@ -159,21 +172,25 @@ impl <T, K, A, B: LinkedStackBehavior<Symbol=K>> LinkedStack<T, K, A, B> {
             }
         }
 
-        let result = split_impl(self, tag).map(|a| *a).or_else(|tag| Err(B::tag_not_found(tag)));
+        let result = split_impl(self, tag)
+            .map(|a| *a)
+            .or_else(|tag| Err(B::tag_not_found(tag)));
         if let Ok(mut res) = result {
-            std::mem::swap(self, &mut res);
-            return Ok(res)
+            swap(self, &mut res);
+            return Ok(res);
         } else {
-            return result
+            return result;
         }
     }
 
     pub fn connect(&mut self, mut additional: LinkedStack<T, K, A, B>) {
-        use std::mem::swap;
         swap(self, &mut additional);
         let original = additional;
 
-        fn connect_impl<T, K, A, B: LinkedStackBehavior>(target: &mut LinkedStack<T, K, A, B>, original: Box<LinkedStack<T, K, A, B>>) {
+        fn connect_impl<T, K, A, B: LinkedStackBehavior>(
+            target: &mut LinkedStack<T, K, A, B>,
+            original: Box<LinkedStack<T, K, A, B>>,
+        ) {
             if target.previous.is_none() {
                 target.previous = Some(original);
             } else {
@@ -186,7 +203,10 @@ impl <T, K, A, B: LinkedStackBehavior<Symbol=K>> LinkedStack<T, K, A, B> {
 
     pub fn iter(&self) -> Vec<&T> {
         let mut out = vec![];
-        fn fill<'a, 'b, T, K, A, B: LinkedStackBehavior>(ls: &'a LinkedStack<T, K, A, B>, f: &'b mut Vec<&'a T>) {
+        fn fill<'a, 'b, T, K, A, B: LinkedStackBehavior>(
+            ls: &'a LinkedStack<T, K, A, B>,
+            f: &'b mut Vec<&'a T>,
+        ) {
             if let Some(next) = ls.previous.as_ref() {
                 fill(next, f);
             }
@@ -290,6 +310,6 @@ mod test {
         assert_eq!(stack.link_len(), 2);
         assert_eq!(after.link_len(), 2);
 
-        assert_eq!(stack.tag,  Some("x"));
+        assert_eq!(stack.tag, Some("x"));
     }
 }
