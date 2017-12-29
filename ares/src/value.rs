@@ -66,6 +66,7 @@ pub enum ValueKind {
     Obj,
 }
 
+
 impl Debug for Value {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         match *self {
@@ -120,201 +121,43 @@ impl Debug for Value {
     }
 }
 
+macro_rules! impl_for_variant {
+    ($is_name: ident, $to_name: ident, $as_name: ident, $variant: ident, $typ: ty) => {
+        pub fn $is_name(self) -> bool {
+            match self {
+                Value::$variant(_) =>  true,
+                _ => false
+            }
+        }
+
+        pub fn $to_name(self) -> VmResult<$typ> {
+            match self {
+                Value::$variant(i) => Ok(i),
+                other => Err(VmError::UnexpectedType {
+                    expected: ValueKind::$variant,
+                    found: other,
+                }),
+            }
+        }
+
+        pub fn $as_name(&self) -> VmResult<&$typ> {
+            match self {
+                &Value::$variant(ref i) => Ok(i),
+                other => Err(VmError::UnexpectedType {
+                    expected: ValueKind::$variant,
+                    found: other.clone(),
+                }),
+            }
+        }
+    };
+}
+
 impl Value {
-    //
-    // Is
-    //
-    pub fn is_int(&self) -> bool {
-        match *self {
-            Value::Integer(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_float(&self) -> bool {
-        match *self {
-            Value::Float(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_symbol(&self) -> bool {
-        match *self {
-            Value::Symbol(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_function(&self) -> bool {
-        match *self {
-            Value::Function(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_continuation(&self) -> bool {
-        match *self {
-            Value::Continuation(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_map(&self) -> bool {
-        match *self {
-            Value::Map(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_obj(&self) -> bool {
-        match *self {
-            Value::Obj(_) => true,
-            _ => false,
-        }
-    }
-    //
-    // TO
-    //
-    pub fn into_int(self) -> VmResult<i64> {
-        match self {
-            Value::Integer(i) => Ok(i),
-            other => Err(VmError::UnexpectedType {
-                found: other,
-                expected: ValueKind::Integer,
-            }),
-        }
-    }
-
-    pub fn into_float(self) -> VmResult<f64> {
-        match self {
-            Value::Float(f) => Ok(f),
-            other => Err(VmError::UnexpectedType {
-                found: other,
-                expected: ValueKind::Float,
-            }),
-        }
-    }
-
-    pub fn into_symbol(self) -> VmResult<Symbol> {
-        match self {
-            Value::Symbol(s) => Ok(s),
-            other => Err(VmError::UnexpectedType {
-                found: other,
-                expected: ValueKind::Symbol,
-            }),
-        }
-    }
-
-    pub fn into_function(self) -> VmResult<FunctionPtr> {
-        match self {
-            Value::Function(f) => Ok(f),
-            other => Err(VmError::UnexpectedType {
-                found: other,
-                expected: ValueKind::Function,
-            }),
-        }
-    }
-
-    pub fn into_continuation(self) -> VmResult<ContinuationPtr> {
-        match self {
-            Value::Continuation(c) => Ok(c),
-            other => Err(VmError::UnexpectedType {
-                found: other,
-                expected: ValueKind::Continuation,
-            }),
-        }
-    }
-
-    pub fn into_map(self) -> VmResult<AresMap> {
-        match self {
-            Value::Map(c) => Ok(c),
-            other => Err(VmError::UnexpectedType {
-                found: other,
-                expected: ValueKind::Map,
-            }),
-        }
-    }
-
-    pub fn into_obj(self) -> VmResult<AresObj> {
-        match self {
-            Value::Obj(c) => Ok(c),
-            other => Err(VmError::UnexpectedType {
-                found: other,
-                expected: ValueKind::Obj,
-            }),
-        }
-    }
-
-    //
-    // AS
-    //
-    pub fn as_int(&self) -> VmResult<&i64> {
-        match self {
-            &Value::Integer(ref i) => Ok(i),
-            other => Err(VmError::UnexpectedType {
-                found: other.clone(),
-                expected: ValueKind::Integer,
-            }),
-        }
-    }
-
-    pub fn as_float(&self) -> VmResult<&f64> {
-        match self {
-            &Value::Float(ref f) => Ok(f),
-            other => Err(VmError::UnexpectedType {
-                found: other.clone(),
-                expected: ValueKind::Float,
-            }),
-        }
-    }
-
-    pub fn as_symbol(&self) -> VmResult<&Symbol> {
-        match self {
-            &Value::Symbol(ref s) => Ok(s),
-            other => Err(VmError::UnexpectedType {
-                found: other.clone(),
-                expected: ValueKind::Symbol,
-            }),
-        }
-    }
-
-    pub fn as_function(&self) -> VmResult<&FunctionPtr> {
-        match self {
-            &Value::Function(ref f) => Ok(f),
-            other => Err(VmError::UnexpectedType {
-                found: other.clone(),
-                expected: ValueKind::Function,
-            }),
-        }
-    }
-
-    pub fn as_continuation(&self) -> VmResult<&ContinuationPtr> {
-        match self {
-            &Value::Continuation(ref c) => Ok(c),
-            other => Err(VmError::UnexpectedType {
-                found: other.clone(),
-                expected: ValueKind::Continuation,
-            }),
-        }
-    }
-
-    pub fn as_map(&self) -> VmResult<&AresMap> {
-        match self {
-            &Value::Map(ref c) => Ok(c),
-            other => Err(VmError::UnexpectedType {
-                found: other.clone(),
-                expected: ValueKind::Map,
-            }),
-        }
-    }
-
-    pub fn as_obj(&self) -> VmResult<&AresObj> {
-        match self {
-            &Value::Obj(ref c) => Ok(c),
-            other => Err(VmError::UnexpectedType {
-                found: other.clone(),
-                expected: ValueKind::Obj,
-            }),
-        }
-    }
+    impl_for_variant!(is_int, into_int, as_int, Integer, i64);
+    impl_for_variant!(is_float, into_float, as_float, Float, f64);
+    impl_for_variant!(is_symbol, into_symbol, as_symbol, Symbol, Symbol);
+    impl_for_variant!(is_function, into_function, as_function, Function, FunctionPtr);
+    impl_for_variant!(is_continuation, into_continuation, as_continuation, Continuation, ContinuationPtr);
+    impl_for_variant!(is_map, into_map, as_map, Map, AresMap);
+    impl_for_variant!(is_obj, into_obj, as_obj, Obj, AresObj);
 }
