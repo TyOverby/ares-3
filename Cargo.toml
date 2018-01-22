@@ -1,3 +1,3 @@
 [workspace]
 
-members = ["ares", "linked-stack"]
+members = ["ares", "linked-stack", "lexer"]
