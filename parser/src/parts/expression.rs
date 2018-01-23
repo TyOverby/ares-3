@@ -1,10 +1,10 @@
 use ::*;
 
-pub fn parse_expression<'lex, 'parse>(
-    tokens: &'lex [Token<'lex>],
-    arena: Arena<'lex, 'parse>,
-    cache: &mut ParseCache<'lex, 'parse>,
-) -> Result<'lex, 'parse> {
+pub fn parse_expression<'parse>(
+    tokens: &'parse [Token<'parse>],
+    arena: Arena<'parse>,
+    cache: &mut ParseCache<'parse>,
+) -> Result<'parse> {
     if let Ok(res) = parse_function(tokens, arena, cache) {
         return Ok(res);
     }

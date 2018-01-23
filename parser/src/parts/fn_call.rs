@@ -1,11 +1,11 @@
 use ::*;
 use util::with_cache;
 
-pub fn parse_function<'lex, 'parse>(
-    tokens: &'lex [Token<'lex>],
-    arena: Arena<'lex, 'parse>,
-    cache: &mut ParseCache<'lex, 'parse>,
-) -> Result<'lex, 'parse> {
+pub fn parse_function<'parse>(
+    tokens: &'parse [Token<'parse>],
+    arena: Arena<'parse>,
+    cache: &mut ParseCache<'parse>,
+) -> Result<'parse> {
     with_cache(cache, CacheKey::Function, tokens, |cache| {
         let (target, tokens) = parse_expression(tokens, arena, cache)?;
         let (_, tokens) = expect_token_type!(tokens, TokenKind::OpenParen, "open parenthesis")?;

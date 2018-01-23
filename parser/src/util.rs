@@ -35,14 +35,14 @@ macro_rules! matches {
     };
 }
 
-pub fn with_cache<'lex, 'parse, F>(
-    cache: &mut ParseCache<'lex, 'parse>,
+pub fn with_cache<'parse, F>(
+    cache: &mut ParseCache<'parse>,
     cache_key: CacheKey,
-    tokens: &'lex [Token<'lex>],
+    tokens: &'parse [Token<'parse>],
     func: F,
-) -> Result<'lex, 'parse>
+) -> Result<'parse>
 where
-    F: FnOnce(&mut ParseCache<'lex, 'parse>) -> Result<'lex, 'parse>,
+    F: FnOnce(&mut ParseCache<'parse>) -> Result<'parse>,
 {
     match cache.get(&(tokens.len(), cache_key)) {
         None => {}
@@ -52,7 +52,7 @@ where
     }
     cache.insert((tokens.len(), cache_key), CacheState::Working);
 
-    let func_res: Result<'lex, 'parse> = func(cache);
+    let func_res: Result<'parse> = func(cache);
     match func_res {
         Ok(res) => {
             cache.insert((tokens.len(), cache_key), CacheState::Done(res));

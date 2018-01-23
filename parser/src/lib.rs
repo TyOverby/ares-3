@@ -10,48 +10,45 @@ use std::collections::HashMap;
 use lexer::{Token, TokenKind};
 use parts::*;
 
-type Arena<'lex, 'parse> = &'parse typed_arena::Arena<Ast<'lex, 'parse>>;
+type Arena<'parse> = &'parse typed_arena::Arena<Ast<'parse>>;
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum CacheKey {
     Function,
 }
 
-type Result<'lex, 'parse> = std::result::Result<
-    (&'parse Ast<'lex, 'parse>, &'lex [Token<'lex>]),
-    (ParseError<'lex>, &'lex [Token<'lex>]),
+type Result<'parse> = std::result::Result<
+    (&'parse Ast<'parse>, &'parse [Token<'parse>]),
+    (ParseError<'parse>, &'parse [Token<'parse>]),
 >;
 
 #[derive(Clone, Debug)]
-pub enum ParseError<'lex> {
+pub enum ParseError<'parse> {
     UnexpectedToken {
-        found: &'lex Token<'lex>,
+        found: &'parse Token<'parse>,
         expected: &'static str,
     },
     Working,
     EndOfFileReached,
 }
 
-pub enum CacheState<'lex: 'parse, 'parse> {
+pub enum CacheState<'parse> {
     Working,
-    Done((&'parse Ast<'lex, 'parse>, &'lex [Token<'lex>])),
-    Failed((ParseError<'lex>, &'lex [Token<'lex>])),
+    Done((&'parse Ast<'parse>, &'parse [Token<'parse>])),
+    Failed((ParseError<'parse>, &'parse [Token<'parse>])),
 }
-type ParseCache<'lex, 'parse> = HashMap<(usize, CacheKey), CacheState<'lex, 'parse>>;
+type ParseCache<'parse> = HashMap<(usize, CacheKey), CacheState<'parse>>;
 
 #[derive(Debug)]
-pub enum Ast<'lex: 'parse, 'parse> {
-    Identifier(&'lex Token<'lex>),
+pub enum Ast<'parse> {
+    Identifier(&'parse Token<'parse>),
     FunctionCall {
-        target: &'parse Ast<'lex, 'parse>,
-        args: Vec<&'parse Ast<'lex, 'parse>>,
+        target: &'parse Ast<'parse>,
+        args: Vec<&'parse Ast<'parse>>,
     },
 }
 
-pub fn parse_top<'lex, 'parse>(
-    tokens: &'lex [Token<'lex>],
-    arena: Arena<'lex, 'parse>,
-) -> Result<'lex, 'parse> {
+pub fn parse_top<'parse>(tokens: &'parse [Token<'parse>], arena: Arena<'parse>) -> Result<'parse> {
     let mut cache = HashMap::new();
     parse_expression(tokens, arena, &mut cache)
 }

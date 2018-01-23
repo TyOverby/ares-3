@@ -1,10 +1,10 @@
 use ::*;
 
-pub fn parse_identifier<'lex, 'parse>(
-    tokens: &'lex [Token<'lex>],
-    arena: Arena<'lex, 'parse>,
-    _cache: &mut ParseCache<'lex, 'parse>,
-) -> Result<'lex, 'parse> {
+pub fn parse_identifier<'parse>(
+    tokens: &'parse [Token<'parse>],
+    arena: Arena<'parse>,
+    _cache: &mut ParseCache<'parse>,
+) -> Result<'parse> {
     let (ident, tokens) = expect_token_type!(tokens, TokenKind::Identifier(_), "identifier")?;
     Ok((arena.alloc(Ast::Identifier(ident)), tokens))
 }
