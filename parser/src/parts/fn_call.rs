@@ -1,4 +1,4 @@
-use super::*;
+use ::*;
 use util::with_cache;
 
 pub fn parse_function<'lex, 'parse>(

@@ -4,11 +4,11 @@ extern crate typed_arena;
 #[macro_use]
 mod util;
 mod test_util;
-mod fn_call;
+mod parts;
 
 use std::collections::HashMap;
 use lexer::{Token, TokenKind};
-use fn_call::parse_function;
+use parts::*;
 
 type Arena<'lex, 'parse> = &'parse typed_arena::Arena<Ast<'lex, 'parse>>;
 
@@ -29,6 +29,7 @@ pub enum ParseError<'lex> {
         expected: &'static str,
     },
     Working,
+    EndOfFileReached,
 }
 
 pub enum CacheState<'lex: 'parse, 'parse> {
@@ -53,35 +54,4 @@ pub fn parse_top<'lex, 'parse>(
 ) -> Result<'lex, 'parse> {
     let mut cache = HashMap::new();
     parse_expression(tokens, arena, &mut cache)
-}
-
-pub fn parse_expression<'lex, 'parse>(
-    tokens: &'lex [Token<'lex>],
-    arena: Arena<'lex, 'parse>,
-    cache: &mut ParseCache<'lex, 'parse>,
-) -> Result<'lex, 'parse> {
-    if let Ok(res) = parse_function(tokens, arena, cache) {
-        return Ok(res);
-    }
-
-    if let Ok(res) = parse_identifier(tokens, arena, cache) {
-        return Ok(res);
-    }
-
-    return Err((
-        ParseError::UnexpectedToken {
-            found: &tokens[0],
-            expected: "expression",
-        },
-        tokens,
-    ));
-}
-
-pub fn parse_identifier<'lex, 'parse>(
-    tokens: &'lex [Token<'lex>],
-    arena: Arena<'lex, 'parse>,
-    _cache: &mut ParseCache<'lex, 'parse>,
-) -> Result<'lex, 'parse> {
-    let (ident, tokens) = expect_token_type!(tokens, TokenKind::Identifier(_), "identifier")?;
-    Ok((arena.alloc(Ast::Identifier(ident)), tokens))
 }

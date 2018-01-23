@@ -2,14 +2,19 @@ use super::*;
 
 macro_rules! expect_token_type {
     ($tokens: expr, $expected: pat, $exp_nice: expr) => {
-        match $tokens[0].kind {
-            $expected => {Ok((&$tokens[0], &$tokens[1..]))}
-            _ => Err((ParseError::UnexpectedToken {
-                    found: &$tokens[0],
-                    expected: $exp_nice,
-                },
-                &$tokens[1..],
-            ))
+        if $tokens.len() == 0 {
+            Err((ParseError::EndOfFileReached, $tokens))
+        }
+        else {
+            match $tokens[0].kind {
+                $expected => {Ok((&$tokens[0], &$tokens[1..]))}
+                _ => Err((ParseError::UnexpectedToken {
+                        found: &$tokens[0],
+                        expected: $exp_nice,
+                    },
+                    &$tokens[1..],
+                ))
+            }
         }
     };
 }
