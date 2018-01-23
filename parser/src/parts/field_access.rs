@@ -1,5 +1,4 @@
 use ::*;
-use util::with_cache;
 
 pub fn parse_field_access<'parse>(
     tokens: &'parse [Token<'parse>],
@@ -77,6 +76,35 @@ fn nested_function_call() {
             },
             left == "a",
             right == "b"
+        };
+    });
+}
+
+#[test]
+fn broken_parse() {
+    use test_util::with_parsed;
+
+    with_parsed("a.1", |res| {
+        let (res, _) = res.unwrap_err();
+        matches!{res,
+            ParseError::UnexpectedToken{..}
+        };
+    });
+}
+
+#[test]
+fn nested_field_access_with_math() {
+    use test_util::with_parsed;
+
+    with_parsed("a.b+c.d*e.f", |res| {
+        let (res, _) = res.unwrap();
+        matches!{ res, &Ast::Add(
+            &Ast::FieldAccess{..},
+                &Ast::Mul(
+                    &Ast::FieldAccess{..},
+                    &Ast::FieldAccess{..}
+                )
+            )
         };
     });
 }
