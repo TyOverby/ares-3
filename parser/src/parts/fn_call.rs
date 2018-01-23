@@ -18,7 +18,7 @@ pub fn parse_function_call<'parse>(
                 let (expr, tokens) = parse_expression(tokens_u, arena, cache)?;
                 args.push(expr);
                 println!("got {:?}", expr);
-                let (comma_or_end, tokens) = expect_token_type!(tokens,  TokenKind::CloseParen | TokenKind::Comma, ", or ) (comma or close parenthesis)")?;
+                let (comma_or_end, tokens) = expect_token_type!(tokens,  TokenKind::CloseParen | TokenKind::Comma, "comma or close parenthesis")?;
                 tokens_u = tokens;
                 if let &Token{kind: TokenKind::CloseParen, .. } = comma_or_end {
                     break;

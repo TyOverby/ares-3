@@ -13,6 +13,10 @@ pub fn parse_base<'parse>(
         return Ok(res);
     }
 
+    if let Ok(res) = parse_parenthesized(tokens, arena, cache) {
+        return Ok(res);
+    }
+
     return Err((
         ParseError::UnexpectedToken {
             found: &tokens[0],
