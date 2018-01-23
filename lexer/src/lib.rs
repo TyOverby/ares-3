@@ -3,14 +3,14 @@ extern crate regex;
 use regex::Regex;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub struct Token<'a> {
-    kind: TokenKind<'a>,
-    start_byte: usize,
-    end_byte: usize,
+pub struct Token<'lex> {
+    pub kind: TokenKind<'lex>,
+    pub start_byte: usize,
+    pub end_byte: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub enum TokenKind<'a> {
+pub enum TokenKind<'lex> {
     OpenParen,
     CloseParen,
     OpenBrace,
@@ -20,15 +20,15 @@ pub enum TokenKind<'a> {
     Semicolon,
     Comma,
     Dot,
-    Whitespace(&'a str),
-    Identifier(&'a str),
+    Whitespace(&'lex str),
+    Identifier(&'lex str),
     Integer(i64),
     Float(f64),
-    Error(&'a str),
+    Error(&'lex str),
 }
 
-pub fn lex<'a>(input: &'a str) -> Vec<Token> {
-    let table: Vec<(&'static str, Box<Fn(&'a str) -> TokenKind<'a>>)> = vec![
+pub fn lex<'lex>(input: &'lex str) -> Vec<Token> {
+    let table: Vec<(&'static str, Box<Fn(&'lex str) -> TokenKind<'lex>>)> = vec![
         (r"\(", Box::new(|_| TokenKind::OpenParen)),
         (r"\)", Box::new(|_| TokenKind::CloseParen)),
         (r"\[", Box::new(|_| TokenKind::OpenBracket)),
@@ -48,7 +48,7 @@ pub fn lex<'a>(input: &'a str) -> Vec<Token> {
             r"[0-9]+",
             Box::new(|s| TokenKind::Integer(s.parse().unwrap())),
         ),
-        (r".", Box::new(|s| TokenKind::Error(s)))
+        (r".", Box::new(|s| TokenKind::Error(s))),
     ];
 
     let processed: Vec<_> = table
