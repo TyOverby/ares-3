@@ -48,7 +48,7 @@ macro_rules! order_ops {
 macro_rules! matches {
     ($value: expr, $pattern: pat) => {
         match $value {
-            $pattern => (),
+            $pattern => true,
             _ => panic!("match failed, actual: {:#?}", $value),
         }
     };
@@ -90,7 +90,7 @@ where
             return Ok(res);
         }
         Err(res) => {
-            println!("err on {:?}", (tokens.len(), cache_key));
+            println!("err on {:?}: {:?}", (tokens.len(), cache_key), res);
             cache.insert((tokens.len(), cache_key), CacheState::Failed(res.clone()));
             return Err(res);
         }

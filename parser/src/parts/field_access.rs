@@ -75,7 +75,8 @@ fn nested_function_call() {
                 ref args,
             },
             left == "a",
-            right == "b"
+            right == "b",
+            args.len() == 0
         };
     });
 }
