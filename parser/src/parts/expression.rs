@@ -35,6 +35,7 @@ pub fn parse_expression<'parse>(
         (tokens, arena, cache),
         parse_additive,
         parse_multiplicative,
+        parse_field_access,
         parse_base
     )
 }

@@ -25,6 +25,7 @@ pub enum CacheKey {
     Additive,
     Multiplicative,
     Expression,
+    FieldAccess,
 }
 
 type Result<'parse> = std::result::Result<
@@ -62,6 +63,10 @@ pub enum Ast<'parse> {
     Sub(&'parse Ast<'parse>, &'parse Ast<'parse>),
     Div(&'parse Ast<'parse>, &'parse Ast<'parse>),
     Mul(&'parse Ast<'parse>, &'parse Ast<'parse>),
+    FieldAccess {
+        target: &'parse Ast<'parse>,
+        field: &'parse Ast<'parse>,
+    },
 }
 
 pub fn parse_top<'parse>(tokens: &'parse [Token<'parse>], arena: Arena<'parse>) -> Result<'parse> {

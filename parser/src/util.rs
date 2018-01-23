@@ -86,9 +86,11 @@ where
     match func_res {
         Ok(res) => {
             cache.insert((tokens.len(), cache_key), CacheState::Done(res));
+            println!("ok on {:?}", (tokens.len(), cache_key));
             return Ok(res);
         }
         Err(res) => {
+            println!("err on {:?}", (tokens.len(), cache_key));
             cache.insert((tokens.len(), cache_key), CacheState::Failed(res.clone()));
             return Err(res);
         }
