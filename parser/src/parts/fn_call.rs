@@ -1,7 +1,7 @@
 use ::*;
 use util::with_cache;
 
-pub fn parse_function<'parse>(
+pub fn parse_function_call<'parse>(
     tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
     cache: &mut ParseCache<'parse>,

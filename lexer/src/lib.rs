@@ -20,6 +20,10 @@ pub enum TokenKind<'lex> {
     Semicolon,
     Comma,
     Dot,
+    Plus,
+    Minus,
+    Div,
+    Mul,
     Whitespace(&'lex str),
     Identifier(&'lex str),
     Integer(i64),
@@ -38,6 +42,10 @@ pub fn lex<'lex>(input: &'lex str) -> Vec<Token> {
         (r";", Box::new(|_| TokenKind::Semicolon)),
         (r",", Box::new(|_| TokenKind::Comma)),
         (r"\.", Box::new(|_| TokenKind::Dot)),
+        (r"\+", Box::new(|_| TokenKind::Plus)),
+        (r"-", Box::new(|_| TokenKind::Minus)),
+        (r"/", Box::new(|_| TokenKind::Div)),
+        (r"\*", Box::new(|_| TokenKind::Mul)),
         (r"[ \n\t]+", Box::new(|s| TokenKind::Whitespace(s))),
         (r"[a-zA-Z_][a-zA-Z0-9_]*", Box::new(TokenKind::Identifier)),
         (
@@ -242,6 +250,50 @@ fn lex_punctuation() {
         vec![
             Token {
                 kind: TokenKind::Comma,
+                start_byte: 0,
+                end_byte: 1,
+            },
+        ]
+    );
+}
+
+#[test]
+fn lex_math() {
+    assert_eq!(
+        lex("+"),
+        vec![
+            Token {
+                kind: TokenKind::Plus,
+                start_byte: 0,
+                end_byte: 1,
+            },
+        ]
+    );
+    assert_eq!(
+        lex("-"),
+        vec![
+            Token {
+                kind: TokenKind::Minus,
+                start_byte: 0,
+                end_byte: 1,
+            },
+        ]
+    );
+    assert_eq!(
+        lex("/"),
+        vec![
+            Token {
+                kind: TokenKind::Div,
+                start_byte: 0,
+                end_byte: 1,
+            },
+        ]
+    );
+    assert_eq!(
+        lex("*"),
+        vec![
+            Token {
+                kind: TokenKind::Mul,
                 start_byte: 0,
                 end_byte: 1,
             },

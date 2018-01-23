@@ -17,6 +17,31 @@ macro_rules! expect_token_type {
             }
         }
     };
+    ($tokens: expr, $expected_1: pat | $expected_2: pat, $exp_nice: expr) => {
+        if $tokens.len() == 0 {
+            Err((ParseError::EndOfFileReached, $tokens))
+        }
+        else {
+            match $tokens[0].kind {
+                $expected_1 | $expected_2 => {Ok((&$tokens[0], &$tokens[1..]))}
+                _ => Err((ParseError::UnexpectedToken {
+                        found: &$tokens[0],
+                        expected: $exp_nice,
+                    },
+                    &$tokens[1..],
+                ))
+            }
+        }
+    };
+}
+
+macro_rules! order_ops {
+    (($tokens: expr, $arena: expr, $cache: expr), $final:ident) => {
+        $final($tokens, $arena, $cache)
+    };
+    (($tokens: expr, $arena: expr, $cache: expr), $next:ident, $($prev:ident),+) => {
+        $next($tokens, $arena, $cache, &|t, a, c| order_ops!((t, a, c), $($prev),+))
+    };
 }
 
 #[cfg(test)]
@@ -44,6 +69,11 @@ pub fn with_cache<'parse, F>(
 where
     F: FnOnce(&mut ParseCache<'parse>) -> Result<'parse>,
 {
+    println!(
+        "{:?} -> {:?}",
+        (tokens.len(), cache_key),
+        cache.get(&(tokens.len(), cache_key))
+    );
     match cache.get(&(tokens.len(), cache_key)) {
         None => {}
         Some(&CacheState::Working) => return Err((ParseError::Working, tokens)),
