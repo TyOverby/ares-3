@@ -1,6 +1,5 @@
 use ::*;
 use lexer::TokenKind;
-use util::with_cache;
 
 pub fn parse_additive<'parse>(
     tokens: &'parse [Token<'parse>],

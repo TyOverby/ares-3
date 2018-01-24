@@ -3,6 +3,7 @@ extern crate lexer;
 extern crate typed_arena;
 
 #[macro_use]
+mod macros;
 mod util;
 mod test_util;
 mod parts;
