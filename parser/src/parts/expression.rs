@@ -32,14 +32,11 @@ pub fn parse_expression<'parse>(
     cache: &mut ParseCache<'parse>,
 ) -> Result<'parse> {
     let base: Parser = &|t, a, c| parse_base(t, a, c);
-    let field_access: Parser =
-        &|t, a, c| parse_field_access(t, a, c, base).or_else(|_| base(t, a, c));
-    let function_call: Parser =
-        &|t, a, c| parse_function_call(t, a, c, field_access);
-    let multiplicative: Parser =
-        &|t, a, c| parse_multiplicative(t, a, c, function_call);
-    let additive: Parser =
-        &|t, a, c| parse_additive(t, a, c, multiplicative);
+    let field_access: Parser = &|t, a, c| parse_field_access(t, a, c, base);
+    let function_call: Parser = &|t, a, c| parse_function_call(t, a, c, field_access);
+    let multiplicative: Parser = &|t, a, c| parse_multiplicative(t, a, c, function_call);
+    let additive: Parser = &|t, a, c| parse_additive(t, a, c, multiplicative);
+    let pipeline: Parser = &|t, a, c| parse_pipeline(t, a, c, additive);
 
-    additive(tokens, arena, cache)
+    pipeline(tokens, arena, cache)
 }

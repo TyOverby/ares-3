@@ -1,6 +1,6 @@
 use ::*;
 
-fn parse_fields<'parse>(
+fn parse_field_access_right<'parse>(
     tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
     cache: &mut ParseCache<'parse>,
@@ -11,7 +11,7 @@ fn parse_fields<'parse>(
         Err(_) => return Ok((prev, tokens)),
     };
     let (right, tokens) = parse_identifier(tokens, arena, cache)?;
-    parse_fields(
+    parse_field_access_right(
         tokens,
         arena,
         cache,
@@ -29,7 +29,7 @@ pub fn parse_field_access<'parse>(
     lower: Parser,
 ) -> Result<'parse> {
     let (left, tokens) = lower(tokens, arena, cache)?;
-    parse_fields(tokens, arena, cache, left)
+    parse_field_access_right(tokens, arena, cache, left)
 }
 
 #[test]

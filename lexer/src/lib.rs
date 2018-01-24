@@ -19,6 +19,7 @@ pub enum TokenKind<'lex> {
     CloseBracket,
     Semicolon,
     Comma,
+    Pipeline,
     Dot,
     Plus,
     Minus,
@@ -42,6 +43,7 @@ pub fn lex<'lex>(input: &'lex str) -> Vec<Token> {
         (r";", Box::new(|_| TokenKind::Semicolon)),
         (r",", Box::new(|_| TokenKind::Comma)),
         (r"\.", Box::new(|_| TokenKind::Dot)),
+        (r"\|>", Box::new(|_| TokenKind::Pipeline)),
         (r"\+", Box::new(|_| TokenKind::Plus)),
         (r"-", Box::new(|_| TokenKind::Minus)),
         (r"/", Box::new(|_| TokenKind::Div)),
@@ -250,6 +252,20 @@ fn lex_punctuation() {
         vec![
             Token {
                 kind: TokenKind::Comma,
+                start_byte: 0,
+                end_byte: 1,
+            },
+        ]
+    );
+}
+
+#[test]
+fn lex_pipeline() {
+    assert_eq!(
+        lex("|>"),
+        vec![
+            Token {
+                kind: TokenKind::Pipeline,
                 start_byte: 0,
                 end_byte: 1,
             },

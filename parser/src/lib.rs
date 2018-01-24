@@ -13,8 +13,11 @@ use parts::*;
 
 type Arena<'parse> = &'parse typed_arena::Arena<Ast<'parse>>;
 
-pub type Parser<'a> = &'a for<'parse> Fn(&'parse [Token<'parse>], Arena<'parse>, &mut ParseCache<'parse>)
-    -> Result<'parse>;
+pub type Parser<'a> = &'a for<'parse> Fn(
+    &'parse [Token<'parse>],
+    Arena<'parse>,
+    &mut ParseCache<'parse>,
+) -> Result<'parse>;
 
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -58,6 +61,7 @@ pub enum Ast<'parse> {
         args: Vec<&'parse Ast<'parse>>,
     },
     Add(&'parse Ast<'parse>, &'parse Ast<'parse>),
+    Pipeline(&'parse Ast<'parse>, &'parse Ast<'parse>),
     Sub(&'parse Ast<'parse>, &'parse Ast<'parse>),
     Div(&'parse Ast<'parse>, &'parse Ast<'parse>),
     Mul(&'parse Ast<'parse>, &'parse Ast<'parse>),
