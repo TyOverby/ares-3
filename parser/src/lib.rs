@@ -1,3 +1,4 @@
+#![feature(catch_expr)]
 extern crate lexer;
 extern crate typed_arena;
 
@@ -12,11 +13,8 @@ use parts::*;
 
 type Arena<'parse> = &'parse typed_arena::Arena<Ast<'parse>>;
 
-pub type Parser<'a> = &'a for<'parse> Fn(
-    &'parse [Token<'parse>],
-    Arena<'parse>,
-    &mut ParseCache<'parse>,
-) -> Result<'parse>;
+pub type Parser<'a> = &'a for<'parse> Fn(&'parse [Token<'parse>], Arena<'parse>, &mut ParseCache<'parse>)
+    -> Result<'parse>;
 
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]

@@ -1,6 +1,6 @@
 use ::*;
-use util::with_cache;
 use lexer::TokenKind;
+use util::with_cache;
 
 pub fn parse_additive<'parse>(
     tokens: &'parse [Token<'parse>],
@@ -8,17 +8,21 @@ pub fn parse_additive<'parse>(
     cache: &mut ParseCache<'parse>,
     lower: Parser,
 ) -> Result<'parse> {
-    with_cache(cache, CacheKey::Additive, tokens, |cache| {
-        let (left, tokens) = lower(tokens, arena, cache)?;
-        let (op, tokens) =
-            expect_token_type!(tokens, TokenKind::Plus | TokenKind::Minus, "+ (plus)")?;
-        let (right, tokens) = lower(tokens, arena, cache)?;
+    let (left, tokens) = lower(tokens, arena, cache)?;
+    let rest: Result<'parse> = do catch {
+        let (op, tokens) = expect_token_type!(
+            tokens,
+            TokenKind::Plus | TokenKind::Minus,
+            "+ or - (add or subtract)"
+        )?;
+        let (right, tokens) = me_or_fallback!(parse_additive, lower, (tokens, arena, cache))?;
         if op.kind == TokenKind::Plus {
             Ok((arena.alloc(Ast::Add(left, right)), tokens))
         } else {
             Ok((arena.alloc(Ast::Sub(left, right)), tokens))
         }
-    }).or_else(|_| lower(tokens, arena, cache))
+    };
+    rest.or(Ok((left, tokens)))
 }
 
 pub fn parse_multiplicative<'parse>(
@@ -27,16 +31,21 @@ pub fn parse_multiplicative<'parse>(
     cache: &mut ParseCache<'parse>,
     lower: Parser,
 ) -> Result<'parse> {
-    with_cache(cache, CacheKey::Multiplicative, tokens, |cache| {
-        let (left, tokens) = lower(tokens, arena, cache)?;
-        let (op, tokens) = expect_token_type!(tokens, TokenKind::Mul | TokenKind::Div, "+ (plus)")?;
-        let (right, tokens) = lower(tokens, arena, cache)?;
+    let (left, tokens) = lower(tokens, arena, cache)?;
+    let rest: Result<'parse> = do catch {
+        let (op, tokens) = expect_token_type!(
+            tokens,
+            TokenKind::Mul | TokenKind::Div,
+            "* or / (multiply or divide)"
+        )?;
+        let (right, tokens) = me_or_fallback!(parse_multiplicative, lower, (tokens, arena, cache))?;
         if op.kind == TokenKind::Mul {
             Ok((arena.alloc(Ast::Mul(left, right)), tokens))
         } else {
             Ok((arena.alloc(Ast::Div(left, right)), tokens))
         }
-    }).or_else(|_| lower(tokens, arena, cache))
+    };
+    rest.or(Ok((left, tokens)))
 }
 
 #[test]
@@ -123,6 +132,20 @@ fn order_of_operations_b() {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::Add(&Ast::Mul(_, _), &Ast::Identifier(_)),
+        };
+    });
+}
+
+#[test]
+fn chained_addition() {
+    use test_util::with_parsed;
+
+    with_parsed("a+b+c", |res| {
+        let (res, _) = res.unwrap();
+        matches!{res,
+            &Ast::Add(
+                &Ast::Identifier(_),
+                &Ast::Add(_, _)),
         };
     });
 }

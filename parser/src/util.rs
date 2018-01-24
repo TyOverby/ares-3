@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use super::*;
 
 macro_rules! expect_token_type {
@@ -35,13 +36,10 @@ macro_rules! expect_token_type {
     };
 }
 
-macro_rules! order_ops {
-    (($tokens: expr, $arena: expr, $cache: expr), $final:ident) => {
-        $final($tokens, $arena, $cache)
-    };
-    (($tokens: expr, $arena: expr, $cache: expr), $next:ident, $($prev:ident),+) => {
-        $next($tokens, $arena, $cache, &|t, a, c| order_ops!((t, a, c), $($prev),+))
-    };
+macro_rules! me_or_fallback {
+    ($me: ident, $lower: ident, ($tokens:expr, $arena:expr, $cache:expr)) => {
+        $me($tokens, $arena, $cache, $lower).or_else(|_| $lower($tokens, $arena, $cache))
+    }
 }
 
 #[cfg(test)]
@@ -69,14 +67,9 @@ pub fn with_cache<'parse, F>(
 where
     F: FnOnce(&mut ParseCache<'parse>) -> Result<'parse>,
 {
-    println!(
-        "{:?} -> {:?}",
-        (tokens.len(), cache_key),
-        cache.get(&(tokens.len(), cache_key))
-    );
     match cache.get(&(tokens.len(), cache_key)) {
         None => {}
-        Some(&CacheState::Working) => return Err((ParseError::Working, tokens)),
+        Some(&CacheState::Working) => panic!("infinite parser recursion detected!!!!!"),
         Some(&CacheState::Failed(ref err)) => return Err(err.clone()),
         Some(&CacheState::Done(res)) => return Ok(res),
     }
@@ -86,11 +79,9 @@ where
     match func_res {
         Ok(res) => {
             cache.insert((tokens.len(), cache_key), CacheState::Done(res));
-            println!("ok on {:?}", (tokens.len(), cache_key));
             return Ok(res);
         }
         Err(res) => {
-            println!("err on {:?}: {:?}", (tokens.len(), cache_key), res);
             cache.insert((tokens.len(), cache_key), CacheState::Failed(res.clone()));
             return Err(res);
         }

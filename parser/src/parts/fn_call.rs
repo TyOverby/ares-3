@@ -1,13 +1,13 @@
 use ::*;
-use util::with_cache;
 
 pub fn parse_function_call<'parse>(
     tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
     cache: &mut ParseCache<'parse>,
+    lower: Parser,
 ) -> Result<'parse> {
-    with_cache(cache, CacheKey::Function, tokens, |cache| {
-        let (target, tokens) = parse_expression(tokens, arena, cache)?;
+    let (target, tokens) = lower(tokens, arena, cache)?;
+    let rest: Result = do catch {
         let mut args = vec![];
         let (_, mut tokens_u) = expect_token_type!(tokens, TokenKind::OpenParen, "open parenthesis")?;
 
@@ -17,7 +17,6 @@ pub fn parse_function_call<'parse>(
             loop {
                 let (expr, tokens) = parse_expression(tokens_u, arena, cache)?;
                 args.push(expr);
-                println!("got {:?}", expr);
                 let (comma_or_end, tokens) = expect_token_type!(tokens,  TokenKind::CloseParen | TokenKind::Comma, "comma or close parenthesis")?;
                 tokens_u = tokens;
                 if let &Token{kind: TokenKind::CloseParen, .. } = comma_or_end {
@@ -33,7 +32,8 @@ pub fn parse_function_call<'parse>(
             }),
             tokens_u,
         ))
-    })
+    };
+    rest.or(Ok((target, tokens)))
 }
 
 #[test]
