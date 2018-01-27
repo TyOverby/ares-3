@@ -21,7 +21,7 @@ pub fn parse_statement<'parse>(
     }
 
 
-    if let Ok(res) = parse_fn_decl(tokens, arena, cache) {
+    if let Ok(res) = parse_let_decl(tokens, arena, cache) {
         return Ok(res);
     }
 

@@ -7,7 +7,7 @@ mod field_access;
 mod parenthesized;
 mod pipeline;
 mod statement;
-mod fn_decl;
+mod let_decl;
 
 pub use self::fn_call::*;
 pub use self::identifier::*;
@@ -18,4 +18,4 @@ pub use self::field_access::*;
 pub use self::parenthesized::*;
 pub use self::pipeline::*;
 pub use self::statement::*;
-pub use self::fn_decl::*;
+pub use self::let_decl::*;

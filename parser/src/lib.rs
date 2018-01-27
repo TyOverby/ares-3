@@ -71,6 +71,10 @@ pub enum Ast<'parse> {
         params: Vec<&'parse Ast<'parse>>,
         body: &'parse Ast<'parse>,
     },
+    VariableDecl {
+        name: &'parse Ast<'parse>,
+        expression: &'parse Ast<'parse>,
+    },
     FieldAccess {
         target: &'parse Ast<'parse>,
         field: &'parse Ast<'parse>,
