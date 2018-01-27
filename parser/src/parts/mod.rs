@@ -8,6 +8,7 @@ mod parenthesized;
 mod pipeline;
 mod statement;
 mod let_decl;
+mod block;
 
 pub use self::fn_call::*;
 pub use self::identifier::*;
@@ -19,3 +20,4 @@ pub use self::parenthesized::*;
 pub use self::pipeline::*;
 pub use self::statement::*;
 pub use self::let_decl::*;
+pub use self::block::*;

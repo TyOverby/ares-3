@@ -17,6 +17,11 @@ pub fn parse_base<'parse>(
         return Ok(res);
     }
 
+    match parse_block_expression(tokens, arena, cache) {
+        Ok(res) => return Ok(res),
+        _ => {}
+    }
+
     return Err((
         ParseError::UnexpectedToken {
             found: &tokens[0],

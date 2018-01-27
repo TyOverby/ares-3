@@ -66,7 +66,7 @@ pub enum Ast<'parse> {
     Sub(&'parse Ast<'parse>, &'parse Ast<'parse>),
     Div(&'parse Ast<'parse>, &'parse Ast<'parse>),
     Mul(&'parse Ast<'parse>, &'parse Ast<'parse>),
-    FunctionDecl{
+    FunctionDecl {
         name: &'parse Ast<'parse>,
         params: Vec<&'parse Ast<'parse>>,
         body: &'parse Ast<'parse>,
@@ -79,5 +79,8 @@ pub enum Ast<'parse> {
         target: &'parse Ast<'parse>,
         field: &'parse Ast<'parse>,
     },
+    BlockExpr {
+        statements: Vec<&'parse Ast<'parse>>,
+        final_expression: &'parse Ast<'parse>,
+    },
 }
-
