@@ -13,9 +13,9 @@ pub fn parse_parenthesized<'parse>(
 
 #[test]
 fn parenthesized_identifier() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("(a)", |res| {
+    with_parsed_expression("(a)", |res| {
         let (res, _) = res.unwrap();
         matches!{ res,
             &Ast::Identifier(&Token{kind: TokenKind::Identifier(id), ..}),
@@ -26,9 +26,9 @@ fn parenthesized_identifier() {
 
 #[test]
 fn parenthesized_math() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("(a+b)*c", |res| {
+    with_parsed_expression("(a+b)*c", |res| {
         let (res, _) = res.unwrap();
         matches!{ res,
             &Ast::Mul(
@@ -44,9 +44,9 @@ fn parenthesized_math() {
 
 #[test]
 fn nested_parens() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("(((((a)))))", |res| {
+    with_parsed_expression("(((((a)))))", |res| {
         let (res, _) = res.unwrap();
         matches!{ res,
             &Ast::Identifier(&Token{kind: TokenKind::Identifier(id), ..}),
@@ -57,9 +57,9 @@ fn nested_parens() {
 
 #[test]
 fn nested_parens_with_function_call() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("(((((a)))(b)))", |res| {
+    with_parsed_expression("(((((a)))(b)))", |res| {
         let (res, _) = res.unwrap();
         matches!{ res,
             &Ast::FunctionCall{

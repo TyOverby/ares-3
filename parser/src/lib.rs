@@ -10,7 +10,7 @@ mod parts;
 
 use std::collections::HashMap;
 use lexer::{Token, TokenKind};
-use parts::*;
+pub use parts::*;
 
 type Arena<'parse> = &'parse typed_arena::Arena<Ast<'parse>>;
 
@@ -66,13 +66,14 @@ pub enum Ast<'parse> {
     Sub(&'parse Ast<'parse>, &'parse Ast<'parse>),
     Div(&'parse Ast<'parse>, &'parse Ast<'parse>),
     Mul(&'parse Ast<'parse>, &'parse Ast<'parse>),
+    FunctionDecl{
+        name: &'parse Ast<'parse>,
+        params: Vec<&'parse Ast<'parse>>,
+        body: &'parse Ast<'parse>,
+    },
     FieldAccess {
         target: &'parse Ast<'parse>,
         field: &'parse Ast<'parse>,
     },
 }
 
-pub fn parse_top<'parse>(tokens: &'parse [Token<'parse>], arena: Arena<'parse>) -> Result<'parse> {
-    let mut cache = HashMap::new();
-    parse_expression(tokens, arena, &mut cache)
-}

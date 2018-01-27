@@ -49,9 +49,9 @@ pub fn parse_multiplicative<'parse>(
 
 #[test]
 fn test_parse_add() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("a+b", |res| {
+    with_parsed_expression("a+b", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::Add(&Ast::Identifier(&Token{kind: TokenKind::Identifier(left), ..}),
@@ -65,9 +65,9 @@ fn test_parse_add() {
 
 #[test]
 fn test_parse_sub() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("a-b", |res| {
+    with_parsed_expression("a-b", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::Sub(&Ast::Identifier(&Token{kind: TokenKind::Identifier(left), ..}),
@@ -81,9 +81,9 @@ fn test_parse_sub() {
 
 #[test]
 fn test_parse_mul() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("a*b", |res| {
+    with_parsed_expression("a*b", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::Mul(&Ast::Identifier(&Token{kind: TokenKind::Identifier(left), ..}),
@@ -97,9 +97,9 @@ fn test_parse_mul() {
 
 #[test]
 fn test_parse_div() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("a/b", |res| {
+    with_parsed_expression("a/b", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::Div(&Ast::Identifier(&Token{kind: TokenKind::Identifier(left), ..}),
@@ -113,9 +113,9 @@ fn test_parse_div() {
 
 #[test]
 fn order_of_operations_a() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("c+a*b", |res| {
+    with_parsed_expression("c+a*b", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::Add(&Ast::Identifier(_), &Ast::Mul(_, _)),
@@ -125,9 +125,9 @@ fn order_of_operations_a() {
 
 #[test]
 fn order_of_operations_b() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("a*b+c", |res| {
+    with_parsed_expression("a*b+c", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::Add(&Ast::Mul(_, _), &Ast::Identifier(_)),
@@ -137,9 +137,9 @@ fn order_of_operations_b() {
 
 #[test]
 fn chained_addition() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("a+b+c", |res| {
+    with_parsed_expression("a+b+c", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::Add(

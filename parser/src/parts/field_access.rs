@@ -34,9 +34,9 @@ pub fn parse_field_access<'parse>(
 
 #[test]
 fn basic_field_access() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("a.b", |res| {
+    with_parsed_expression("a.b", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::FieldAccess{
@@ -51,9 +51,9 @@ fn basic_field_access() {
 
 #[test]
 fn nested_field_access() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("a.b.c", |res| {
+    with_parsed_expression("a.b.c", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::FieldAccess{
@@ -72,9 +72,9 @@ fn nested_field_access() {
 
 #[test]
 fn nested_function_call() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("a.b()", |res| {
+    with_parsed_expression("a.b()", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::FunctionCall{
@@ -93,9 +93,9 @@ fn nested_function_call() {
 
 /*
 fn broken_parse() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("a.1", |res| {
+    with_parsed_expression("a.1", |res| {
         let (res, _) = res.unwrap_err();
         matches!{res,
             ParseError::UnexpectedToken{..}
@@ -105,9 +105,9 @@ fn broken_parse() {
 
 #[test]
 fn nested_field_access_with_math() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("a.b+c.d*e.f", |res| {
+    with_parsed_expression("a.b+c.d*e.f", |res| {
         let (res, _) = res.unwrap();
         matches!{ res, &Ast::Add(
             &Ast::FieldAccess{..},

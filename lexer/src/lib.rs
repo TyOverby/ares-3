@@ -25,6 +25,8 @@ pub enum TokenKind<'lex> {
     Minus,
     Div,
     Mul,
+    Let,
+    Equal,
     Whitespace(&'lex str),
     Identifier(&'lex str),
     Integer(i64),
@@ -47,6 +49,8 @@ pub fn lex<'lex>(input: &'lex str) -> Vec<Token> {
         (r"\+", Box::new(|_| TokenKind::Plus)),
         (r"-", Box::new(|_| TokenKind::Minus)),
         (r"/", Box::new(|_| TokenKind::Div)),
+        (r"(let)($|[ \n\t])", Box::new(|_| TokenKind::Let)),
+        (r"=", Box::new(|_| TokenKind::Equal)),
         (r"\*", Box::new(|_| TokenKind::Mul)),
         (r"[ \n\t]+", Box::new(|s| TokenKind::Whitespace(s))),
         (r"[a-zA-Z_][a-zA-Z0-9_]*", Box::new(TokenKind::Identifier)),
@@ -68,12 +72,18 @@ pub fn lex<'lex>(input: &'lex str) -> Vec<Token> {
 
     let lex_one = |input, offset| {
         for &(ref regex, ref apply) in &processed {
-            if let Some(m) = regex.find(input) {
-                let kind = apply(m.as_str());
-                assert_eq!(m.start(), 0);
+            if let Some(captures) = regex.captures(input) {
+                let capture = if captures.len() == 1 {
+                    captures.get(0)
+                } else {
+                    captures.get(1)
+                }.unwrap();
+
+                let kind = apply(capture.as_str());
+                assert_eq!(capture.start(), 0);
                 return Some(Token {
                     start_byte: offset,
-                    end_byte: offset + m.end(),
+                    end_byte: offset + capture.end(),
                     kind: kind,
                 });
             }
@@ -267,7 +277,82 @@ fn lex_pipeline() {
             Token {
                 kind: TokenKind::Pipeline,
                 start_byte: 0,
-                end_byte: 1,
+                end_byte: 2,
+            },
+        ]
+    );
+}
+
+#[test]
+fn lex_let_with_spaces() {
+    assert_eq!(
+        lex("let "),
+        vec![
+            Token {
+                kind: TokenKind::Let,
+                start_byte: 0,
+                end_byte: 3,
+            },
+            Token {
+                kind: TokenKind::Whitespace(" "),
+                start_byte: 3,
+                end_byte: 4,
+            },
+        ]
+    );
+}
+
+#[test]
+fn lex_let() {
+    assert_eq!(
+        lex("let"),
+        vec![
+            Token {
+                kind: TokenKind::Let,
+                start_byte: 0,
+                end_byte: 3,
+            },
+        ]
+    );
+}
+
+#[test]
+fn identifier_that_starts_with_let() {
+    assert_eq!(
+        lex("letx"),
+        vec![
+            Token {
+                kind: TokenKind::Identifier("letx"),
+                start_byte: 0,
+                end_byte: 4,
+            },
+        ]
+    );
+}
+
+#[test]
+fn lex_identifier() {
+    assert_eq!(
+        lex("abc"),
+        vec![
+            Token {
+                kind: TokenKind::Identifier("abc"),
+                start_byte: 0,
+                end_byte: 3,
+            },
+        ]
+    );
+}
+
+#[test]
+fn lex_identifier_with_numbers() {
+    assert_eq!(
+        lex("abc1"),
+        vec![
+            Token {
+                kind: TokenKind::Identifier("abc1"),
+                start_byte: 0,
+                end_byte: 4,
             },
         ]
     );

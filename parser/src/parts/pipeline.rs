@@ -33,9 +33,9 @@ pub fn parse_pipeline<'parse>(
 
 #[test]
 fn basic_pipeline() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("a|>c", |res| {
+    with_parsed_expression("a|>c", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::Pipeline(
@@ -48,9 +48,9 @@ fn basic_pipeline() {
 
 #[test]
 fn chained_pipeline() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("a|>b|>c", |res| {
+    with_parsed_expression("a|>b|>c", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::Pipeline(

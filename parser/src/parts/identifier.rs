@@ -11,9 +11,9 @@ pub fn parse_identifier<'parse>(
 
 #[test]
 fn identifier() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("abc", |res| {
+    with_parsed_expression("abc", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::Identifier(&Token{kind: TokenKind::Identifier(ident), ..}),

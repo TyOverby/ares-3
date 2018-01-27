@@ -38,9 +38,9 @@ pub fn parse_function_call<'parse>(
 
 #[test]
 fn basic_function_call() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("abc()", |res| {
+    with_parsed_expression("abc()", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::FunctionCall{ target: &Ast::Identifier(&Token{kind: TokenKind::Identifier(ident), ..}), ref args},
@@ -53,9 +53,9 @@ fn basic_function_call() {
 
 #[test]
 fn one_arg_function_call() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("abc(123)", |res| {
+    with_parsed_expression("abc(123)", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::FunctionCall{ target: &Ast::Identifier(&Token{kind: TokenKind::Identifier(_), ..}), ref args},
@@ -68,9 +68,9 @@ fn one_arg_function_call() {
 
 #[test]
 fn multi_arg_function_call() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("abc(123,cde)", |res| {
+    with_parsed_expression("abc(123,cde)", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::FunctionCall{ target: &Ast::Identifier(&Token{kind: TokenKind::Identifier(_), ..}), ref args},
@@ -84,9 +84,9 @@ fn multi_arg_function_call() {
 
 #[test]
 fn nested_function_call() {
-    use test_util::with_parsed;
+    use test_util::with_parsed_expression;
 
-    with_parsed("abc(def(),ghi(123))", |res| {
+    with_parsed_expression("abc(def(),ghi(123))", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::FunctionCall{ target: &Ast::Identifier(&Token{kind: TokenKind::Identifier(_), ..}), ref args},
