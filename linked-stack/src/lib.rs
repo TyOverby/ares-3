@@ -11,7 +11,7 @@ pub trait LinkedStackBehavior {
     fn tag_not_found(symbol: Self::Symbol) -> Self::Error;
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, PartialOrd)]
 pub struct LinkedStack<T, K, A, B: LinkedStackBehavior> {
     tag: Option<K>,
     aux: A,

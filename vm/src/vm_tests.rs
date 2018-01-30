@@ -2,8 +2,7 @@ use vm::*;
 use vm;
 use self::Instruction::*;
 use value::Value::*;
-use value::{AresMap, AresObj, Value};
-use function::{self, new_func};
+use value::{AresMap, Value, new_func, Function};
 
 fn symval(v: &'static str) -> Value {
     Value::Symbol(vm::Symbol(v))
@@ -11,7 +10,7 @@ fn symval(v: &'static str) -> Value {
 
 #[test]
 fn basic_return_value() {
-    let function = new_func(function::Function {
+    let function = new_func(Function {
         name: Some("adder".into()),
         arg_count: 0,
         instructions: vec![Push(Integer(1)), Ret],
@@ -27,73 +26,8 @@ fn basic_return_value() {
 }
 
 #[test]
-fn empty_obj() {
-    let function = new_func(function::Function {
-        name: Some("empty_map".into()),
-        arg_count: 0,
-        instructions: vec![ObjEmpty, Ret],
-    });
-
-    let mut vm = Vm::new(function);
-    assert_eq!(vm.run(), Ok(Obj(AresObj::new())));
-}
-
-#[test]
-fn obj_with_some_adds() {
-    let function = new_func(function::Function {
-        name: Some("empty_map".into()),
-        arg_count: 0,
-        instructions: vec![
-            Push(Value::Symbol(vm::Symbol("hi"))),
-            Push(Integer(5)),
-            ObjEmpty,
-            ObjInsert,
-            Ret,
-        ],
-    });
-
-    let mut vm = Vm::new(function);
-    let obj = AresObj::new().plus(vm::Symbol("hi"), Value::Integer(5));
-    assert_eq!(vm.run(), Ok(Obj(obj)));
-}
-
-#[test]
-fn obj_get() {
-    let function = new_func(function::Function {
-        name: Some("empty_symbol".into()),
-        arg_count: 0,
-        instructions: vec![
-            Push(Value::Symbol(vm::Symbol("hi"))),
-            Push(Value::Integer(5)),
-            ObjEmpty,
-            ObjInsert,
-            Push(Value::Symbol(vm::Symbol("hi"))),
-            ObjGet,
-            Ret,
-        ],
-    });
-
-    let mut vm = Vm::new(function);
-    assert_eq!(vm.run(), Ok(Integer(5)));
-}
-
-#[test]
-fn bad_obj_get() {
-    let function = new_func(function::Function {
-        name: Some("empty_map".into()),
-        arg_count: 0,
-        instructions: vec![ObjEmpty, Push(Value::Symbol(vm::Symbol("hi"))), ObjGet, Ret],
-    });
-
-    let mut vm = Vm::new(function);
-    assert_eq!(vm.run(), Err(VmError::FieldNotFound(vm::Symbol("hi"))));
-}
-
-// STOP HERE
-
-#[test]
 fn empty_map() {
-    let function = new_func(function::Function {
+    let function = new_func(Function {
         name: Some("empty_map".into()),
         arg_count: 0,
         instructions: vec![MapEmpty, Ret],
@@ -105,7 +39,7 @@ fn empty_map() {
 
 #[test]
 fn map_with_some_adds() {
-    let function = new_func(function::Function {
+    let function = new_func(Function {
         name: Some("empty_map".into()),
         arg_count: 0,
         instructions: vec![
@@ -118,13 +52,13 @@ fn map_with_some_adds() {
     });
 
     let mut vm = Vm::new(function);
-    let map = AresMap::new().plus(Value::Integer(20), Value::Integer(5));
+    let map = AresMap::new().insert(Value::Integer(20), Value::Integer(5));
     assert_eq!(vm.run(), Ok(Map(map)));
 }
 
 #[test]
 fn map_get() {
-    let function = new_func(function::Function {
+    let function = new_func(Function {
         name: Some("empty_map".into()),
         arg_count: 0,
         instructions: vec![
@@ -144,7 +78,7 @@ fn map_get() {
 
 #[test]
 fn bad_map_get() {
-    let function = new_func(function::Function {
+    let function = new_func(Function {
         name: Some("empty_map".into()),
         arg_count: 0,
         instructions: vec![MapEmpty, Push(Value::Integer(20)), MapGet, Ret],
@@ -156,7 +90,7 @@ fn bad_map_get() {
 
 #[test]
 fn test_addition() {
-    let function = new_func(function::Function {
+    let function = new_func(Function {
         name: Some("adder".into()),
         arg_count: 0,
         instructions: vec![Push(Integer(5)), Push(Integer(10)), Add, Ret],
@@ -169,13 +103,13 @@ fn test_addition() {
 
 #[test]
 fn test_function_call() {
-    let adder = new_func(function::Function {
+    let adder = new_func(Function {
         name: Some("adder".into()),
         arg_count: 2,
         instructions: vec![Add, Ret],
     });
 
-    let main = new_func(function::Function {
+    let main = new_func(Function {
         name: Some("main".into()),
         arg_count: 0,
         instructions: vec![
@@ -194,13 +128,13 @@ fn test_function_call() {
 
 #[test]
 fn recursive_fn() {
-    let nullfunc = new_func(function::Function {
+    let nullfunc = new_func(Function {
         name: Some("NULL".into()),
         arg_count: 0,
         instructions: vec![],
     });
 
-    let recursive_infinite = new_func(function::Function {
+    let recursive_infinite = new_func(Function {
         name: Some("recursive infinite".into()),
         arg_count: 0,
         instructions: vec![Push(Function(nullfunc)), Push(Integer(0)), Call],
@@ -221,13 +155,13 @@ fn recursive_fn() {
 
 #[test]
 fn reset_without_a_shift() {
-    let inside_reset = new_func(function::Function {
+    let inside_reset = new_func(Function {
         name: Some("inside reset".into()),
         arg_count: 0,
         instructions: vec![Push(Integer(1)), Ret],
     });
 
-    let main = new_func(function::Function {
+    let main = new_func(Function {
         name: Some("main".into()),
         arg_count: 0,
         instructions: vec![Push(Function(inside_reset)), Push(symval("hi")), Reset, Ret],
@@ -239,19 +173,19 @@ fn reset_without_a_shift() {
 
 #[test]
 fn reset_with_an_id_shift() {
-    let id = new_func(function::Function {
+    let id = new_func(Function {
         name: Some("id".into()),
         arg_count: 1,
         instructions: vec![Ret],
     });
 
-    let reset_closure = new_func(function::Function {
+    let reset_closure = new_func(Function {
         name: Some("reset closure".into()),
         arg_count: 0,
         instructions: vec![Push(Function(id)), Push(symval("hi")), Shift, Ret],
     });
 
-    let main = new_func(function::Function {
+    let main = new_func(Function {
         name: Some("main".into()),
         arg_count: 0,
         instructions: vec![
@@ -266,7 +200,7 @@ fn reset_with_an_id_shift() {
     let v = vm.run().unwrap();
     assert!(v.is_continuation());
 
-    let new_main = new_func(function::Function {
+    let new_main = new_func(Function {
         name: Some("main2".into()),
         arg_count: 0,
         instructions: vec![Push(v), Push(Integer(5)), Resume, Ret],
@@ -277,13 +211,13 @@ fn reset_with_an_id_shift() {
 
 #[test]
 fn reset_using_shift_expression() {
-    let id = new_func(function::Function {
+    let id = new_func(Function {
         name: Some("id".into()),
         arg_count: 1,
         instructions: vec![Ret],
     });
 
-    let reset_closure = new_func(function::Function {
+    let reset_closure = new_func(Function {
         name: Some("reset closure".into()),
         arg_count: 0,
         instructions: vec![
@@ -296,7 +230,7 @@ fn reset_using_shift_expression() {
         ],
     });
 
-    let main = new_func(function::Function {
+    let main = new_func(Function {
         name: Some("main2".into()),
         arg_count: 0,
         instructions: vec![

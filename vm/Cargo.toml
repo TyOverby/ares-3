@@ -6,5 +6,5 @@ authors = ["Ty Overby <ty@pre-alpha.com>"]
 [dependencies.linked-stack]
 path = "../linked-stack"
 
-[dependencies.hamt-rs]
-path = "../hamt-rs"
+[dependencies]
+rpds = "0.3.0"

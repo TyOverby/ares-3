@@ -1,16 +1,13 @@
 use linked_stack::{LinkedStack, LinkedStackBehavior};
-use std::rc::Rc;
-use continuation;
-use function::FunctionPtr;
-use value::{AresMap, AresObj, Value, ValueKind};
+use value::{AresMap, Continuation, ContinuationPtr, FunctionPtr, Value, ValueKind};
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
-#[derive(Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash, PartialOrd)]
 pub struct Symbol(pub &'static str);
 
 pub type VmResult<T> = Result<T, VmError>;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, PartialOrd)]
 pub(crate) struct StackBehavior;
 impl LinkedStackBehavior for StackBehavior {
     type Symbol = Symbol;
@@ -41,7 +38,7 @@ pub enum VmError {
     RanOutOfInstructions,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, PartialOrd)]
 pub enum Instruction {
     Add,
     Push(Value),
@@ -56,13 +53,9 @@ pub enum Instruction {
     MapEmpty,
     MapInsert,
     MapGet,
-
-    ObjEmpty,
-    ObjInsert,
-    ObjGet,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, PartialOrd)]
 pub struct FuncExecData {
     function: FunctionPtr,
     ip: usize,
@@ -132,26 +125,6 @@ impl Vm {
                 self.stack.push(v)?;
             }
 
-            ObjEmpty => {
-                self.stack.push(Value::Obj(AresObj::new()))?;
-            }
-            ObjInsert => {
-                let obj = self.stack.pop()?.into_obj()?;
-                let v = self.stack.pop()?;
-                let k = self.stack.pop()?.into_symbol()?;
-                let obj = obj.plus(k, v);
-                self.stack.push(Value::Obj(obj))?;
-            }
-            ObjGet => {
-                let k = self.stack.pop()?.into_symbol()?;
-                let obj = self.stack.pop()?.into_obj()?;
-                if let Some(v) = obj.find(&k) {
-                    self.stack.push(v.clone())?;
-                } else {
-                    return Err(VmError::FieldNotFound(k));
-                }
-            }
-
             MapEmpty => {
                 self.stack.push(Value::Map(AresMap::new()))?;
             }
@@ -159,13 +132,13 @@ impl Vm {
                 let map = self.stack.pop()?.into_map()?;
                 let v = self.stack.pop()?;
                 let k = self.stack.pop()?;
-                let map = map.plus(k, v);
+                let map = map.insert(k, v);
                 self.stack.push(Value::Map(map))?;
             }
             MapGet => {
                 let k = self.stack.pop()?;
                 let map = self.stack.pop()?.into_map()?;
-                if let Some(v) = map.find(&k) {
+                if let Some(v) = map.get(&k) {
                     self.stack.push(v.clone())?;
                 } else {
                     return Err(VmError::KeyNotFound(k));
@@ -229,7 +202,7 @@ impl Vm {
                         ip: 0,
                     },
                 );
-                let cont = Rc::new(continuation::Continuation { stack: cont_stack });
+                let cont = ContinuationPtr::new(Continuation { stack: cont_stack });
                 self.stack.push(Value::Continuation(cont))?;
             }
             Resume => {

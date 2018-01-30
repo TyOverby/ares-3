@@ -1,14 +1,20 @@
+mod map;
+mod function;
+mod continuation;
+mod list;
+
 use vm::{Symbol, VmError, VmResult};
-use function::FunctionPtr;
-use continuation::ContinuationPtr;
+
 use std::fmt::{Debug, Formatter, Result as FmtResult};
-use hamt_rs::{CopyStore, HamtMap};
 use std::hash::{Hash, Hasher};
+use std::cmp::Ordering;
 
-pub type AresMap = HamtMap<Value, Value, CopyStore<Value, Value>>;
-pub type AresObj = HamtMap<Symbol, Value, CopyStore<Symbol, Value>>;
+pub use self::function::{FunctionPtr, new_func, Function};
+pub use self::continuation::{Continuation, ContinuationPtr};
+pub use self::map::AresMap;
+pub use self::list::AresList;
 
-#[derive(Clone)]
+#[derive(Clone, PartialOrd)]
 pub enum Value {
     Integer(i64),
     Float(f64),
@@ -16,7 +22,7 @@ pub enum Value {
     Function(FunctionPtr),
     Continuation(ContinuationPtr),
     Map(AresMap),
-    Obj(AresObj),
+    List(AresList),
 }
 
 impl PartialEq for Value {
@@ -29,9 +35,15 @@ impl PartialEq for Value {
             (&Function(ref l), &Function(ref r)) => l == r,
             (&Continuation(ref l), &Continuation(ref r)) => l == r,
             (&Map(ref l), &Map(ref r)) => l == r,
-            (&Obj(ref l), &Obj(ref r)) => l == r,
+            (&List(ref l), &List(ref r)) => l == r,
             _ => false,
         }
+    }
+}
+
+impl Ord for Value {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(&other).unwrap_or(Ordering::Equal)
     }
 }
 
@@ -47,7 +59,7 @@ impl Hash for Value {
                 as_i.hash(state);
             }
             Value::Symbol(ref s) => s.hash(state),
-            Value::Function(_) | Value::Continuation(_) | Value::Obj(_) | Value::Map(_) => {
+            Value::Function(_) | Value::Continuation(_) | Value::List(_) | Value::Map(_) => {
                 unimplemented!();
             }
         }
@@ -64,6 +76,7 @@ pub enum ValueKind {
     Continuation,
     Map,
     Obj,
+    List,
 }
 
 
@@ -85,13 +98,13 @@ impl Debug for Value {
             } else {
                 write!(f, "<continuation>")
             },
-            Value::Obj(ref o) => {
-                write!(f, "Object {{")?;
+            Value::List(ref o) => {
+                write!(f, "List [")?;
                 if f.alternate() {
                     write!(f, "\n")?
                 }
-                for (&Symbol(k), v) in o.iter() {
-                    write!(f, "{:?}: {:?},", k, v)?;
+                for item in o.iter() {
+                    write!(f, "{:?},", item)?;
                     if f.alternate() {
                         write!(f, "\n")?
                     }
@@ -156,8 +169,20 @@ impl Value {
     impl_for_variant!(is_int, into_int, as_int, Integer, i64);
     impl_for_variant!(is_float, into_float, as_float, Float, f64);
     impl_for_variant!(is_symbol, into_symbol, as_symbol, Symbol, Symbol);
-    impl_for_variant!(is_function, into_function, as_function, Function, FunctionPtr);
-    impl_for_variant!(is_continuation, into_continuation, as_continuation, Continuation, ContinuationPtr);
+    impl_for_variant!(
+        is_function,
+        into_function,
+        as_function,
+        Function,
+        FunctionPtr
+    );
+    impl_for_variant!(
+        is_continuation,
+        into_continuation,
+        as_continuation,
+        Continuation,
+        ContinuationPtr
+    );
     impl_for_variant!(is_map, into_map, as_map, Map, AresMap);
-    impl_for_variant!(is_obj, into_obj, as_obj, Obj, AresObj);
+    impl_for_variant!(is_list, into_list, as_list, List, AresList);
 }

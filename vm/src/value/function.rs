@@ -1,15 +1,28 @@
 use vm::Instruction;
 use std::rc::Rc;
+use std::ops::Deref;
 use std::cell::RefCell;
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
-pub type FunctionPtr = Rc<RefCell<Function>>;
-
-pub fn new_func(f: Function) -> FunctionPtr {
-    Rc::new(RefCell::new(f))
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
+pub struct FunctionPtr {
+    function: Rc<RefCell<Function>>,
 }
 
-#[derive(Clone, PartialEq)]
+impl Deref for FunctionPtr {
+    type Target = RefCell<Function>;
+    fn deref(&self) -> &Self::Target {
+        &self.function
+    }
+}
+
+pub fn new_func(f: Function) -> FunctionPtr {
+    FunctionPtr {
+        function: Rc::new(RefCell::new(f)),
+    }
+}
+
+#[derive(PartialEq, PartialOrd)]
 pub struct Function {
     pub name: Option<String>,
     pub arg_count: usize,
