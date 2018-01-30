@@ -123,9 +123,9 @@ impl Debug for Value {
 
 macro_rules! impl_for_variant {
     ($is_name: ident, $to_name: ident, $as_name: ident, $variant: ident, $typ: ty) => {
-        pub fn $is_name(self) -> bool {
+        pub fn $is_name(&self) -> bool {
             match self {
-                Value::$variant(_) =>  true,
+                &Value::$variant(_) =>  true,
                 _ => false
             }
         }

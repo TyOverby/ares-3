@@ -263,13 +263,13 @@ fn reset_with_an_id_shift() {
     });
 
     let mut vm = Vm::new(main);
-    let v = vm.run();
-    assert!(v.as_ref().unwrap().is_continuation());
+    let v = vm.run().unwrap();
+    assert!(v.is_continuation());
 
     let new_main = new_func(function::Function {
         name: Some("main2".into()),
         arg_count: 0,
-        instructions: vec![Push(v.unwrap()), Push(Integer(5)), Resume, Ret],
+        instructions: vec![Push(v), Push(Integer(5)), Resume, Ret],
     });
     let mut vm = Vm::new(new_main);
     assert_eq!(vm.run(), Ok(Integer(5)));
