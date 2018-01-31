@@ -38,7 +38,7 @@ fn block_with_single_expression() {
         matches!{ res,
             &Ast::BlockExpr {
                 ref statements,
-                final_expression: &Ast::Identifier(_)
+                final_expression: &Ast::Identifier(_, _)
             },
             statements.len() == 0
         };
@@ -54,7 +54,7 @@ fn block_with_a_statement_and_then_an_expression() {
         matches!{ res,
             &Ast::BlockExpr {
                 ref statements,
-                final_expression: &Ast::Identifier(_)
+                final_expression: &Ast::Identifier(_, _)
             },
             statements.len() == 1,
             matches!(statements[0], &Ast::FunctionCall{..})
@@ -71,7 +71,7 @@ fn block_with_multiple_statements_and_then_an_expression() {
         matches!{ res,
             &Ast::BlockExpr {
                 ref statements,
-                final_expression: &Ast::Identifier(_)
+                final_expression: &Ast::Identifier(_, _)
             },
             statements.len() == 2,
             matches!(statements[0], &Ast::FunctionCall{..}),
@@ -89,7 +89,7 @@ fn nested_blocks() {
         matches!{ res,
             &Ast::BlockExpr {
                 final_expression: &Ast::BlockExpr {
-                    final_expression: &Ast::Identifier(_),
+                    final_expression: &Ast::Identifier(_, _),
                     ..
                 },
                 ..

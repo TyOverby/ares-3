@@ -54,11 +54,8 @@ fn test_parse_add() {
     with_parsed_expression("a+b", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
-            &Ast::Add(&Ast::Identifier(&Token{kind: TokenKind::Identifier(left), ..}),
-                      &Ast::Identifier(&Token{kind: TokenKind::Identifier(right), ..})),
-
-            left == "a",
-            right == "b"
+            &Ast::Add(&Ast::Identifier(_, "a"),
+                      &Ast::Identifier(_, "b"))
         };
     });
 }
@@ -70,11 +67,8 @@ fn test_parse_sub() {
     with_parsed_expression("a-b", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
-            &Ast::Sub(&Ast::Identifier(&Token{kind: TokenKind::Identifier(left), ..}),
-                      &Ast::Identifier(&Token{kind: TokenKind::Identifier(right), ..})),
-
-            left == "a",
-            right == "b"
+            &Ast::Sub(&Ast::Identifier(_, "a"),
+                      &Ast::Identifier(_, "b"))
         };
     });
 }
@@ -86,11 +80,8 @@ fn test_parse_mul() {
     with_parsed_expression("a*b", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
-            &Ast::Mul(&Ast::Identifier(&Token{kind: TokenKind::Identifier(left), ..}),
-                      &Ast::Identifier(&Token{kind: TokenKind::Identifier(right), ..})),
-
-            left == "a",
-            right == "b"
+            &Ast::Mul(&Ast::Identifier(_, "a"),
+                      &Ast::Identifier(_, "b"))
         };
     });
 }
@@ -102,11 +93,8 @@ fn test_parse_div() {
     with_parsed_expression("a/b", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
-            &Ast::Div(&Ast::Identifier(&Token{kind: TokenKind::Identifier(left), ..}),
-                      &Ast::Identifier(&Token{kind: TokenKind::Identifier(right), ..})),
-
-            left == "a",
-            right == "b"
+            &Ast::Div(&Ast::Identifier(_, "a"),
+                      &Ast::Identifier(_, "b"))
         };
     });
 }
@@ -118,7 +106,7 @@ fn order_of_operations_a() {
     with_parsed_expression("c+a*b", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
-            &Ast::Add(&Ast::Identifier(_), &Ast::Mul(_, _)),
+            &Ast::Add(&Ast::Identifier(_, "c"), &Ast::Mul(_, _)),
         };
     });
 }
@@ -130,7 +118,7 @@ fn order_of_operations_b() {
     with_parsed_expression("a*b+c", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
-            &Ast::Add(&Ast::Mul(_, _), &Ast::Identifier(_)),
+            &Ast::Add(&Ast::Mul(_, _), &Ast::Identifier(_, "c")),
         };
     });
 }
@@ -143,7 +131,7 @@ fn chained_addition() {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::Add(
-                &Ast::Identifier(_),
+                &Ast::Identifier(_, "a"),
                 &Ast::Add(_, _)),
         };
     });

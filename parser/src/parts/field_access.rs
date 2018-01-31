@@ -40,11 +40,9 @@ fn basic_field_access() {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::FieldAccess{
-                target: &Ast::Identifier(&Token{kind: TokenKind::Identifier(left), ..}),
-                field:  &Ast::Identifier(&Token{kind: TokenKind::Identifier(right), ..})
-            },
-            left == "a",
-            right == "b"
+                target: &Ast::Identifier(_, "a"),
+                field:  &Ast::Identifier(_, "b")
+            }
         };
     });
 }
@@ -58,14 +56,11 @@ fn nested_field_access() {
         matches!{res,
             &Ast::FieldAccess{
                 target: &Ast::FieldAccess{
-                    target: &Ast::Identifier(&Token{kind: TokenKind::Identifier(left), ..}),
-                    field:  &Ast::Identifier(&Token{kind: TokenKind::Identifier(middle), ..})
+                    target: &Ast::Identifier(_, "a"),
+                    field:  &Ast::Identifier(_, "b")
                 },
-                field:  &Ast::Identifier(&Token{kind: TokenKind::Identifier(right), ..})
-            },
-            left == "a",
-            middle == "b",
-            right == "c"
+                field:  &Ast::Identifier(_, "c")
+            }
         };
     });
 }
@@ -79,29 +74,15 @@ fn nested_function_call() {
         matches!{res,
             &Ast::FunctionCall{
                 target: &Ast::FieldAccess{
-                    target: &Ast::Identifier(&Token{kind: TokenKind::Identifier(left), ..}),
-                    field:  &Ast::Identifier(&Token{kind: TokenKind::Identifier(right), ..})
+                    target: &Ast::Identifier(_, "a"),
+                    field:  &Ast::Identifier(_, "b")
                 },
                 ref args,
             },
-            left == "a",
-            right == "b",
             args.len() == 0
         };
     });
 }
-
-/*
-fn broken_parse() {
-    use test_util::with_parsed_expression;
-
-    with_parsed_expression("a.1", |res| {
-        let (res, _) = res.unwrap_err();
-        matches!{res,
-            ParseError::UnexpectedToken{..}
-        };
-    });
-}*/
 
 #[test]
 fn nested_field_access_with_math() {

@@ -39,8 +39,8 @@ fn basic_pipeline() {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::Pipeline(
-                &Ast::Identifier(_),
-                &Ast::Identifier(_),
+                &Ast::Identifier(_, "a"),
+                &Ast::Identifier(_, "c"),
             )
         };
     });
@@ -55,10 +55,10 @@ fn chained_pipeline() {
         matches!{res,
             &Ast::Pipeline(
                 &Ast::Pipeline(
-                    &Ast::Identifier(_),
-                    &Ast::Identifier(_),
+                    &Ast::Identifier(_, "a"),
+                    &Ast::Identifier(_, "b"),
                 ),
-                &Ast::Identifier(_),
+                &Ast::Identifier(_, "c"),
             )
         };
     });

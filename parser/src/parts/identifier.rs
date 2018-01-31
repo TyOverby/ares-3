@@ -6,7 +6,16 @@ pub fn parse_identifier<'parse>(
     _cache: &mut ParseCache<'parse>,
 ) -> Result<'parse> {
     let (ident, tokens) = expect_token_type!(tokens, TokenKind::Identifier(_), "identifier")?;
-    Ok((arena.alloc(Ast::Identifier(ident)), tokens))
+    let s = if let &Token {
+        kind: TokenKind::Identifier(s),
+        ..
+    } = ident
+    {
+        s
+    } else {
+        unreachable!()
+    };
+    Ok((arena.alloc(Ast::Identifier(ident, s)), tokens))
 }
 
 #[test]
@@ -16,9 +25,7 @@ fn identifier() {
     with_parsed_expression("abc", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
-            &Ast::Identifier(&Token{kind: TokenKind::Identifier(ident), ..}),
-
-            ident == "abc"
+            &Ast::Identifier(_, "abc")
         };
     });
 }

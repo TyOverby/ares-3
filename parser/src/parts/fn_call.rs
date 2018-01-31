@@ -9,17 +9,28 @@ pub fn parse_function_call<'parse>(
     let (target, tokens) = lower(tokens, arena, cache)?;
     let rest: Result = do catch {
         let mut args = vec![];
-        let (_, mut tokens_u) = expect_token_type!(tokens, TokenKind::OpenParen, "open parenthesis")?;
+        let (_, mut tokens_u) =
+            expect_token_type!(tokens, TokenKind::OpenParen, "open parenthesis")?;
 
-        if let Ok((_, tokens)) = expect_token_type!(tokens_u, TokenKind::CloseParen, "close parenthesis") {
+        if let Ok((_, tokens)) =
+            expect_token_type!(tokens_u, TokenKind::CloseParen, "close parenthesis")
+        {
             tokens_u = tokens;
         } else {
             loop {
                 let (expr, tokens) = parse_expression(tokens_u, arena, cache)?;
                 args.push(expr);
-                let (comma_or_end, tokens) = expect_token_type!(tokens,  TokenKind::CloseParen | TokenKind::Comma, "comma or close parenthesis")?;
+                let (comma_or_end, tokens) = expect_token_type!(
+                    tokens,
+                    TokenKind::CloseParen | TokenKind::Comma,
+                    "comma or close parenthesis"
+                )?;
                 tokens_u = tokens;
-                if let &Token{kind: TokenKind::CloseParen, .. } = comma_or_end {
+                if let &Token {
+                    kind: TokenKind::CloseParen,
+                    ..
+                } = comma_or_end
+                {
                     break;
                 }
             }
@@ -43,10 +54,9 @@ fn basic_function_call() {
     with_parsed_expression("abc()", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
-            &Ast::FunctionCall{ target: &Ast::Identifier(&Token{kind: TokenKind::Identifier(ident), ..}), ref args},
+            &Ast::FunctionCall{ target: &Ast::Identifier(_, "abc"), ref args},
 
-            args.len() == 0,
-            ident == "abc"
+            args.len() == 0
         };
     });
 }
@@ -58,10 +68,10 @@ fn one_arg_function_call() {
     with_parsed_expression("abc(123)", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
-            &Ast::FunctionCall{ target: &Ast::Identifier(&Token{kind: TokenKind::Identifier(_), ..}), ref args},
+            &Ast::FunctionCall{ target: &Ast::Identifier(_, "abc"), ref args},
 
             args.len() == 1,
-            matches!(args[0], &Ast::Number(_))
+            matches!(args[0], &Ast::Integer(_, 123))
         };
     });
 }
@@ -73,11 +83,11 @@ fn multi_arg_function_call() {
     with_parsed_expression("abc(123,cde)", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
-            &Ast::FunctionCall{ target: &Ast::Identifier(&Token{kind: TokenKind::Identifier(_), ..}), ref args},
+            &Ast::FunctionCall{ target: &Ast::Identifier(_, "abc"), ref args},
 
             args.len() == 2,
-            matches!(args[0], &Ast::Number(_)),
-            matches!(args[1], &Ast::Identifier(_))
+            matches!(args[0], &Ast::Integer(_, 123)),
+            matches!(args[1], &Ast::Identifier(_, "cde"))
         };
     });
 }
@@ -89,7 +99,7 @@ fn nested_function_call() {
     with_parsed_expression("abc(def(),ghi(123))", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
-            &Ast::FunctionCall{ target: &Ast::Identifier(&Token{kind: TokenKind::Identifier(_), ..}), ref args},
+            &Ast::FunctionCall{ target: &Ast::Identifier(_, "abc"), ref args},
 
             args.len() == 2,
             matches!{args[0],

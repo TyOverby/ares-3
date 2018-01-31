@@ -72,12 +72,11 @@ fn no_arg_function_decl() {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::FunctionDecl{
-                name: &Ast::Identifier(&Token{kind: TokenKind::Identifier(ident), ..}),
+                name: &Ast::Identifier(_, "abc"),
                 ref params,
-                body: &Ast::Number(&Token{kind: TokenKind::Integer(5), ..}),
+                body: &Ast::Integer(_, 5),
             },
-            params.len() == 0,
-            ident == "abc"
+            params.len() == 0
         };
     });
 }
@@ -90,12 +89,11 @@ fn more_complicated_fn_body() {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::FunctionDecl{
-                name: &Ast::Identifier(&Token{kind: TokenKind::Identifier(ident), ..}),
+                name: &Ast::Identifier(_, "abc"),
                 ref params,
                 body: &Ast::Add(_, _)
             },
-            params.len() == 0,
-            ident == "abc"
+            params.len() == 0
         };
     });
 }
@@ -108,16 +106,12 @@ fn fn_body_with_single_param() {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::FunctionDecl {
-                name: &Ast::Identifier(&Token{kind: TokenKind::Identifier(ident), ..}),
+                name: &Ast::Identifier(_, "abc"),
                 ref params,
-                body: &Ast::Number(_),
+                body: &Ast::Integer(_, 10),
             },
             params.len() == 1,
-            ident == "abc",
-            matches!{params[0],
-                &Ast::Identifier(&Token{kind: TokenKind::Identifier(ident), ..}),
-                ident == "a"
-            }
+            matches!(params[0], &Ast::Identifier(_, "a"))
         };
     });
 }
@@ -130,20 +124,13 @@ fn fn_body_with_multiple_params() {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::FunctionDecl {
-                name: &Ast::Identifier(&Token{kind: TokenKind::Identifier(ident), ..}),
+                name: &Ast::Identifier(_, "abc"),
                 ref params,
                 body: &Ast::Add(_, _),
             },
             params.len() == 2,
-            ident == "abc",
-            matches!{params[0],
-                &Ast::Identifier(&Token{kind: TokenKind::Identifier(ident), ..}),
-                ident == "a"
-            },
-            matches!{params[1],
-                &Ast::Identifier(&Token{kind: TokenKind::Identifier(ident), ..}),
-                ident == "b"
-            }
+            matches!(params[0], &Ast::Identifier(_, "a")),
+            matches!(params[1], &Ast::Identifier(_, "b"))
         };
     });
 }

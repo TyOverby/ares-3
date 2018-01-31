@@ -18,8 +18,7 @@ fn parenthesized_identifier() {
     with_parsed_expression("(a)", |res| {
         let (res, _) = res.unwrap();
         matches!{ res,
-            &Ast::Identifier(&Token{kind: TokenKind::Identifier(id), ..}),
-            id == "a"
+            &Ast::Identifier(_, "a")
         };
     });
 }
@@ -33,10 +32,10 @@ fn parenthesized_math() {
         matches!{ res,
             &Ast::Mul(
                 &Ast::Add(
-                    &Ast::Identifier(_),
-                    &Ast::Identifier(_),
+                    &Ast::Identifier(_, "a"),
+                    &Ast::Identifier(_, "b"),
                 ),
-                &Ast::Identifier(_),
+                &Ast::Identifier(_, "c"),
             )
         };
     });
@@ -49,8 +48,7 @@ fn nested_parens() {
     with_parsed_expression("(((((a)))))", |res| {
         let (res, _) = res.unwrap();
         matches!{ res,
-            &Ast::Identifier(&Token{kind: TokenKind::Identifier(id), ..}),
-            id == "a"
+            &Ast::Identifier(_, "a")
         };
     });
 }
@@ -63,12 +61,10 @@ fn nested_parens_with_function_call() {
         let (res, _) = res.unwrap();
         matches!{ res,
             &Ast::FunctionCall{
-                target: &Ast::Identifier(&Token{kind: TokenKind::Identifier(id), ..}),
+                target: &Ast::Identifier(_, "a"),
                 ref args
             },
-            id == "a",
             args.len() == 1
-
         };
     });
 }

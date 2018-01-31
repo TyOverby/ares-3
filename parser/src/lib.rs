@@ -55,8 +55,9 @@ type ParseCache<'parse> = HashMap<(usize, CacheKey), CacheState<'parse>>;
 
 #[derive(Debug)]
 pub enum Ast<'parse> {
-    Identifier(&'parse Token<'parse>),
-    Number(&'parse Token<'parse>),
+    Identifier(&'parse Token<'parse>, &'parse str),
+    Integer(&'parse Token<'parse>, i64),
+    Float(&'parse Token<'parse>, f64),
     FunctionCall {
         target: &'parse Ast<'parse>,
         args: Vec<&'parse Ast<'parse>>,
