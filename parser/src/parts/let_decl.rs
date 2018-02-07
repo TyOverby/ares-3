@@ -4,7 +4,8 @@ fn parse_function_params<'parse>(
     mut tokens_u: &'parse [Token<'parse>],
     arena: Arena<'parse>,
     cache: &mut ParseCache<'parse>,
-    name: &'parse Ast<'parse>,
+    name: &'parse str,
+    name_ast: &'parse Ast<'parse>,
 ) -> Result<'parse> {
     let mut params = vec![];
     if let Ok((_, tokens)) =
@@ -14,7 +15,12 @@ fn parse_function_params<'parse>(
     } else {
         loop {
             let (param, tokens) = parse_identifier(tokens_u, arena, cache)?;
-            params.push(param);
+            if let &Ast::Identifier(_, s) = param {
+                params.push((s, param));
+            } else {
+                unreachable!();
+            }
+
             let (comma_or_end, tokens) = expect_token_type!(
                 tokens,
                 TokenKind::CloseParen | TokenKind::Comma,
@@ -35,7 +41,12 @@ fn parse_function_params<'parse>(
     let (body, tokens) = parse_expression(tokens, arena, cache)?;
     let (_, tokens) = expect_token_type!(tokens, TokenKind::Semicolon, "; (semicolon)")?;
     Ok((
-        arena.alloc(Ast::FunctionDecl { name, params, body }),
+        arena.alloc(Ast::FunctionDecl {
+            name,
+            name_ast,
+            params,
+            body,
+        }),
         tokens,
     ))
 }
@@ -47,18 +58,27 @@ pub fn parse_let_decl<'parse>(
 ) -> Result<'parse> {
     let (_, tokens) = expect_token_type!(tokens, TokenKind::Let, "let (keyword)")?;
     let (name, tokens) = parse_identifier(tokens, arena, cache)?;
+    let name_s = if let &Ast::Identifier(_, s) = name {
+        s
+    } else {
+        unreachable!()
+    };
     let (tok, tokens) = expect_token_type!(
         tokens,
         TokenKind::OpenParen | TokenKind::Equal,
         "'(' (open paren), '=' (equals)"
     )?;
     if tok.kind == TokenKind::OpenParen {
-        parse_function_params(tokens, arena, cache, name)
+        parse_function_params(tokens, arena, cache, name_s, name)
     } else {
         let (expression, tokens) = parse_expression(tokens, arena, cache)?;
         let (_, tokens) = expect_token_type!(tokens, TokenKind::Semicolon, "';' (semicolon)")?;
         Ok((
-            arena.alloc(Ast::VariableDecl { name, expression }),
+            arena.alloc(Ast::VariableDecl {
+                name: name_s,
+                name_ast: name,
+                expression,
+            }),
             tokens,
         ))
     }
@@ -72,9 +92,10 @@ fn no_arg_function_decl() {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::FunctionDecl{
-                name: &Ast::Identifier(_, "abc"),
+                name: "abc",
                 ref params,
                 body: &Ast::Integer(_, 5),
+                ..
             },
             params.len() == 0
         };
@@ -89,9 +110,10 @@ fn more_complicated_fn_body() {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::FunctionDecl{
-                name: &Ast::Identifier(_, "abc"),
+                name: "abc",
                 ref params,
-                body: &Ast::Add(_, _)
+                body: &Ast::Add(_, _),
+                ..
             },
             params.len() == 0
         };
@@ -106,12 +128,13 @@ fn fn_body_with_single_param() {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::FunctionDecl {
-                name: &Ast::Identifier(_, "abc"),
+                name: "abc",
                 ref params,
                 body: &Ast::Integer(_, 10),
+                ..
             },
             params.len() == 1,
-            matches!(params[0], &Ast::Identifier(_, "a"))
+            matches!(params[0].0, "a")
         };
     });
 }
@@ -124,13 +147,14 @@ fn fn_body_with_multiple_params() {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::FunctionDecl {
-                name: &Ast::Identifier(_, "abc"),
+                name: "abc",
                 ref params,
                 body: &Ast::Add(_, _),
+                ..
             },
             params.len() == 2,
-            matches!(params[0], &Ast::Identifier(_, "a")),
-            matches!(params[1], &Ast::Identifier(_, "b"))
+            matches!(params[0].0, "a"),
+            matches!(params[1].0, "b")
         };
     });
 }

@@ -11,6 +11,11 @@ fn parse_field_access_right<'parse>(
         Err(_) => return Ok((prev, tokens)),
     };
     let (right, tokens) = parse_identifier(tokens, arena, cache)?;
+    let name_s = if let &Ast::Identifier(_, s) = right {
+        s
+    } else {
+        unreachable!()
+    };
     parse_field_access_right(
         tokens,
         arena,
@@ -18,6 +23,7 @@ fn parse_field_access_right<'parse>(
         arena.alloc(Ast::FieldAccess {
             target: prev,
             field: right,
+            field_name: name_s,
         }),
     )
 }
@@ -41,7 +47,8 @@ fn basic_field_access() {
         matches!{res,
             &Ast::FieldAccess{
                 target: &Ast::Identifier(_, "a"),
-                field:  &Ast::Identifier(_, "b")
+                field_name:  "b",
+                ..
             }
         };
     });
@@ -57,9 +64,11 @@ fn nested_field_access() {
             &Ast::FieldAccess{
                 target: &Ast::FieldAccess{
                     target: &Ast::Identifier(_, "a"),
-                    field:  &Ast::Identifier(_, "b")
+                    field_name:  "b",
+                    ..
                 },
-                field:  &Ast::Identifier(_, "c")
+                field_name:  "c",
+                ..
             }
         };
     });
@@ -75,7 +84,8 @@ fn nested_function_call() {
             &Ast::FunctionCall{
                 target: &Ast::FieldAccess{
                     target: &Ast::Identifier(_, "a"),
-                    field:  &Ast::Identifier(_, "b")
+                    field_name:  "b",
+                    ..
                 },
                 ref args,
             },
