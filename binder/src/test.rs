@@ -29,8 +29,8 @@ where
 
     remove_whitespace(&mut lexed);
     let mut cache = HashMap::new();
-    let parsed = parse_statement(&lexed, &parse_arena, &mut cache).unwrap();
-    let bound = bind_top(&bind_arena, 0, parsed.0);
+    let parsed = parse_module(&lexed, 0, &parse_arena, &mut cache).unwrap();
+    let bound = bind_top(&bind_arena, parsed.0);
     f(bound)
 }
 
@@ -49,11 +49,15 @@ fn bind_binary_operator() {
     with_bind("1 + 2;", |res| {
         let r = res.unwrap();
         matches!(r,
-            Bound::Add {
-                left: &Bound::Integer{value: 1, ..},
-                right: &Bound::Integer{value: 2, ..},
-                ..
-            }
+            Bound::Module { statements, .. },
+            statements.len() == 1,
+            matches!(statements[0],
+                Bound::Add {
+                    left: &Bound::Integer{value: 1, ..},
+                    right: &Bound::Integer{value: 2, ..},
+                    ..
+                }
+            )
         );
     });
 }
@@ -62,12 +66,18 @@ fn bind_binary_operator() {
 fn bind_module_variable_decl() {
     with_bind("let x = 5;", |res| {
         let r = res.unwrap();
-        matches!(r, Bound::VariableDecl {
-            name: "x",
-            expression: &Bound::Integer{value: 5, ..},
-            location: BindingKind::Module{..},
-            ..
-        });
+        matches!(r,
+            Bound::Module { statements, .. },
+            statements.len() == 1,
+            matches!(statements[0],
+                Bound::VariableDecl {
+                    name: "x",
+                    expression: &Bound::Integer{value: 5, ..},
+                    location: BindingKind::Module{..},
+                    ..
+                }
+            )
+        );
     });
 }
 
@@ -75,32 +85,38 @@ fn bind_module_variable_decl() {
 fn bind_module_fn_decl() {
     with_bind("let x(y) = 5;", |res| {
         let r = res.unwrap();
-        matches!(r, Bound::FunctionDecl{
-            name: "x",
-            body: &Bound::Integer{value: 5, ..},
-            location: BindingKind::Module{..},
-            params,
-            ..
-        },
-        params[0].0 == "y");
+        matches!(r,
+            Bound::Module{ statements, .. },
+            matches!(&statements[0],
+                &Bound::FunctionDecl{
+                    name: "x",
+                    body: &Bound::Integer{value: 5, ..},
+                    location: BindingKind::Module{..},
+                    ref params,
+                    ..
+                },
+                params[0].0 == "y")
+        );
     });
 
     with_bind("let x(y) = y;", |res| {
         let r = res.unwrap();
-        matches!(r, Bound::FunctionDecl{
-            name: "x",
-            body: &Bound::Identifier{binding_kind: BindingKind::Argument(0), ..},
-            location: BindingKind::Module{..},
-            params,
-            ..
-        },
-        params[0].0 == "y");
+        matches!(r,
+            Bound::Module{ statements, .. },
+            statements.len() == 1,
+            matches!(&statements[0],
+                &Bound::FunctionDecl {
+                    name: "x",
+                    body: &Bound::Identifier{binding_kind: BindingKind::Argument(0), ..},
+                    location: BindingKind::Module{..},
+                    ref params,
+                    ..
+                },
+                params[0].0 == "y")
+        );
     });
 
     with_bind("let x(y) = z;", |res| {
-        matches!(res,
-            Err(Error::UnboundIdentifier(ref s)),
-            &*s == "z"
-        );
+        matches!(res, Err(Error::UnboundIdentifier(ref s)), &*s == "z");
     });
 }

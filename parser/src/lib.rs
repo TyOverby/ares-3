@@ -83,6 +83,10 @@ pub enum Ast<'parse> {
         field: &'parse Ast<'parse>,
         field_name: &'parse str,
     },
+    Module {
+        statements: Vec<&'parse Ast<'parse>>,
+        module_id: u32,
+    },
     BlockExpr {
         statements: Vec<&'parse Ast<'parse>>,
         final_expression: &'parse Ast<'parse>,

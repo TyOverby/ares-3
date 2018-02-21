@@ -9,6 +9,7 @@ mod pipeline;
 mod statement;
 mod let_decl;
 mod block;
+mod module;
 
 pub use self::fn_call::*;
 pub use self::identifier::*;
@@ -21,3 +22,4 @@ pub use self::pipeline::*;
 pub use self::statement::*;
 pub use self::let_decl::*;
 pub use self::block::*;
+pub use self::module::*;

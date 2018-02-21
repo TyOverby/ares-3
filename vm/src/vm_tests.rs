@@ -4,8 +4,8 @@ use self::Instruction::*;
 use value::Value::*;
 use value::{AresMap, Value, new_func, Function};
 
-fn symval(v: &'static str) -> Value {
-    Value::Symbol(vm::Symbol(v))
+fn symval(v: &str) -> Value {
+    Value::Symbol(vm::Symbol(v.into()))
 }
 
 #[test]

@@ -4,6 +4,7 @@ extern crate typed_arena;
 
 mod fn_binder;
 mod module_binder;
+mod buck_stops_here_binder;
 #[cfg(test)]
 mod test;
 
@@ -11,6 +12,8 @@ use std::rc::Rc;
 use std::collections::{HashMap, HashSet};
 use parser::Ast;
 use typed_arena::Arena;
+
+use module_binder::ModuleBinder;
 
 #[derive(Debug)]
 pub enum BindingKind {
@@ -106,19 +109,21 @@ pub enum Bound<'bound> {
         final_expression_ast: &'bound Ast<'bound>,
         final_expression: &'bound Bound<'bound>,
     },
+    Module {
+        ast: &'bound Ast<'bound>,
+        statements: Vec<Bound<'bound>>,
+        binder: ModuleBinder,
+    },
 }
 
 pub fn bind_top<'bound>(
     arena: &'bound Arena<Bound<'bound>>,
-    module_id: u32,
     ast: &'bound Ast<'bound>,
 ) -> Result<Bound<'bound>, Error> {
-    let mut module_binder = module_binder::ModuleBinder {
-        module_id,
-        definitions: HashSet::new(),
-    };
+    let mut top_binder = buck_stops_here_binder::BuckStopsHereBinder;
 
-    bind(arena, &mut module_binder, ast)
+
+    bind(arena, &mut top_binder, ast)
 }
 
 fn bind<'bound>(
@@ -182,6 +187,23 @@ fn bind<'bound>(
                 .collect::<Result<Vec<_>, _>>()?,
         },
         &Ast::BlockExpr { .. } => unimplemented!(),
+        &Ast::Module {
+            ref statements,
+            module_id,
+        } => {
+            let mut module_binder = module_binder::ModuleBinder {
+                module_id,
+                definitions: HashSet::new(),
+            };
+            Bound::Module {
+                ast,
+                statements: statements
+                    .iter()
+                    .map(|stmt| bind(arena, &mut module_binder, stmt))
+                    .collect::<Result<Vec<_>, _>>()?,
+                binder: module_binder,
+            }
+        }
         &Ast::VariableDecl {
             name,
             name_ast: _,

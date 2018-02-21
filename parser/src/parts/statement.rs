@@ -1,6 +1,5 @@
 use ::*;
 
-
 pub fn parse_expression_statement<'parse>(
     tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
@@ -19,7 +18,6 @@ pub fn parse_statement<'parse>(
     if let Ok(res) = parse_expression_statement(tokens, arena, cache) {
         return Ok(res);
     }
-
 
     if let Ok(res) = parse_let_decl(tokens, arena, cache) {
         return Ok(res);
