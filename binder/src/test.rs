@@ -98,6 +98,9 @@ fn bind_module_fn_decl() {
     });
 
     with_bind("let x(y) = z;", |res| {
-        assert!(res.is_err());
+        matches!(res,
+            Err(Error::UnboundIdentifier(ref s)),
+            &*s == "z"
+        );
     });
 }
