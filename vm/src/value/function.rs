@@ -4,7 +4,7 @@ use std::ops::Deref;
 use std::cell::RefCell;
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct FunctionPtr {
     function: Rc<RefCell<Function>>,
 }
@@ -22,7 +22,7 @@ pub fn new_func(f: Function) -> FunctionPtr {
     }
 }
 
-#[derive(PartialEq, PartialOrd)]
+#[derive(PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Function {
     pub name: Option<String>,
     pub arg_count: usize,

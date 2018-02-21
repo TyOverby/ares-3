@@ -1,3 +1,7 @@
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+
 use std::marker::PhantomData;
 use std::mem::swap;
 use std::fmt::{Debug, Formatter, Result as FmtResult};
@@ -11,7 +15,7 @@ pub trait LinkedStackBehavior {
     fn tag_not_found(symbol: Self::Symbol) -> Self::Error;
 }
 
-#[derive(Clone, Eq, PartialEq, PartialOrd)]
+#[derive(Clone, Eq, PartialEq, PartialOrd, Deserialize, Serialize)]
 pub struct LinkedStack<T, K, A, B: LinkedStackBehavior> {
     tag: Option<K>,
     aux: A,

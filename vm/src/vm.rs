@@ -2,13 +2,14 @@ use linked_stack::{LinkedStack, LinkedStackBehavior};
 use value::{AresMap, Continuation, ContinuationPtr, FunctionPtr, Value, ValueKind};
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
-#[derive(Clone, Eq, PartialEq, Hash, PartialOrd)]
-pub struct Symbol(pub &'static str);
+#[derive(Clone, Eq, PartialEq, Hash, PartialOrd, Serialize, Deserialize)]
+pub struct Symbol(pub String);
 
 pub type VmResult<T> = Result<T, VmError>;
 
-#[derive(Clone, PartialEq, Debug, PartialOrd)]
+#[derive(Clone, PartialEq, Debug, PartialOrd, Serialize, Deserialize)]
 pub(crate) struct StackBehavior;
+
 impl LinkedStackBehavior for StackBehavior {
     type Symbol = Symbol;
     type Error = VmError;
@@ -23,9 +24,10 @@ impl LinkedStackBehavior for StackBehavior {
         VmError::TagNotFound(symbol)
     }
 }
+
 pub(crate) type ValueStack = LinkedStack<Value, Symbol, FuncExecData, StackBehavior>;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum VmError {
     StackUnderflow,
     StackOverflow,
@@ -38,7 +40,7 @@ pub enum VmError {
     RanOutOfInstructions,
 }
 
-#[derive(Clone, PartialEq, Debug, PartialOrd)]
+#[derive(Clone, PartialEq, Debug, PartialOrd, Serialize, Deserialize)]
 pub enum Instruction {
     Add,
     Push(Value),
@@ -55,13 +57,13 @@ pub enum Instruction {
     MapGet,
 }
 
-#[derive(Clone, PartialEq, Debug, PartialOrd)]
+#[derive(Clone, PartialEq, Debug, PartialOrd, Serialize, Deserialize)]
 pub struct FuncExecData {
     function: FunctionPtr,
     ip: usize,
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub struct Vm {
     pub(crate) stack: ValueStack,
     pub(crate) debug_values: Vec<Value>,

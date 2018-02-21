@@ -4,3 +4,5 @@ version = "0.1.0"
 authors = ["tyoverby"]
 
 [dependencies]
+serde = "1.*.*"
+serde_derive = "1.*.*"

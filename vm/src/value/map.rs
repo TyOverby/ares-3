@@ -2,7 +2,7 @@ use rpds::RedBlackTreeMap;
 use super::Value;
 use std::ops::Deref;
 
-#[derive(Clone, PartialEq, PartialOrd)]
+#[derive(Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct AresMap {
     map: RedBlackTreeMap<Value, Value>,
 }

@@ -2,7 +2,7 @@ use rpds::List;
 use super::Value;
 use std::ops::Deref;
 
-#[derive(Clone, PartialEq, PartialOrd)]
+#[derive(Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct AresList {
     list: List<Value>,
 }

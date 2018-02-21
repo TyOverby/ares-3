@@ -9,12 +9,12 @@ use std::fmt::{Debug, Formatter, Result as FmtResult};
 use std::hash::{Hash, Hasher};
 use std::cmp::Ordering;
 
-pub use self::function::{FunctionPtr, new_func, Function};
+pub use self::function::{new_func, Function, FunctionPtr};
 pub use self::continuation::{Continuation, ContinuationPtr};
 pub use self::map::AresMap;
 pub use self::list::AresList;
 
-#[derive(Clone, PartialOrd)]
+#[derive(Clone, PartialOrd, Serialize, Deserialize)]
 pub enum Value {
     Integer(i64),
     Float(f64),
@@ -67,7 +67,7 @@ impl Hash for Value {
 }
 impl Eq for Value {}
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum ValueKind {
     Integer,
     Float,
@@ -85,7 +85,7 @@ impl Debug for Value {
         match *self {
             Value::Integer(i) => write!(f, "{}i64", i),
             Value::Float(n) => write!(f, "{}f64", n),
-            Value::Symbol(Symbol(s)) => write!(f, "'{}", s),
+            Value::Symbol(Symbol(ref s)) => write!(f, "'{}", s),
             Value::Function(ref c) => if f.alternate() {
                 write!(f, "{:?}", c.borrow())
             } else {
