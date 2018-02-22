@@ -95,10 +95,13 @@ fn bind_module_fn_decl() {
                     ref params,
                     ..
                 },
-                params[0].0 == "y")
+                params[0].0 == DeclarationKind::Named("y".into()))
         );
     });
+}
 
+#[test]
+fn bind_module_fn_decl_with_param_reference() {
     with_bind("let x(y) = y;", |res| {
         let r = res.unwrap();
         matches!(r,
@@ -112,10 +115,31 @@ fn bind_module_fn_decl() {
                     ref params,
                     ..
                 },
-                params[0].0 == "y")
+                params[0].0 == DeclarationKind::Named("y".into()))
         );
     });
+}
 
+#[test]
+fn bind_module_fn_decl_with_some_locals() {
+    with_bind("let x() = { let a = 5; let b = 10; a + b };", |res| {
+        let r = res.unwrap();
+        matches!(r,
+            Bound::Module{ statements, .. },
+            statements.len() == 1
+        );
+    });
+}
+
+#[test]
+fn bind_module_fn_decl_with_some_locals_bad() {
+    with_bind("let x() = { let a = 5; let b = 10; a + c };", |res| {
+        assert!(res.is_err());
+    });
+}
+
+#[test]
+fn bind_module_fn_decl_with_bad_reference() {
     with_bind("let x(y) = z;", |res| {
         matches!(res, Err(Error::UnboundIdentifier(ref s)), &*s == "z");
     });

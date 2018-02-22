@@ -4,6 +4,7 @@ extern crate typed_arena;
 
 mod fn_binder;
 mod module_binder;
+mod block_binder;
 mod buck_stops_here_binder;
 #[cfg(test)]
 mod test;
@@ -20,7 +21,14 @@ pub enum BindingKind {
     FunctionLocal(u32),
     Argument(u32),
     Upvar(u32),
-    Module { module_id: u32, symbol: Rc<String> },
+    Module {
+        module_id: u32,
+        symbol: Rc<DeclarationKind>,
+    },
+}
+
+pub struct BindingState {
+    gen_id: u64,
 }
 
 #[derive(Debug)]
@@ -28,9 +36,15 @@ pub enum Error {
     UnboundIdentifier(String),
 }
 
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub enum DeclarationKind {
+    Named(String),
+    Generated(u64, String),
+}
+
 pub trait Binder<'bound> {
-    fn add_declaration(&mut self, symbol: &'bound str) -> BindingKind;
-    fn lookup(&mut self, symbol: &'bound str) -> Result<BindingKind, Error>;
+    fn add_declaration(&mut self, symbol: DeclarationKind, &mut BindingState) -> BindingKind;
+    fn lookup(&mut self, symbol: &DeclarationKind) -> Result<BindingKind, Error>;
 }
 
 #[derive(Debug)]
@@ -85,10 +99,10 @@ pub enum Bound<'bound> {
     },
     FunctionDecl {
         name: &'bound str,
-        params: Vec<(&'bound str, &'bound Ast<'bound>)>,
+        params: Vec<(DeclarationKind, &'bound Ast<'bound>)>,
         body: &'bound Bound<'bound>,
-        locals: Vec<&'bound str>,
-        upvars: HashMap<&'bound str, (BindingKind, u32)>,
+        locals: Vec<DeclarationKind>,
+        upvars: HashMap<DeclarationKind, (BindingKind, u32)>,
         ast: &'bound Ast<'bound>,
         location: BindingKind,
     },
@@ -105,8 +119,8 @@ pub enum Bound<'bound> {
         target: &'bound Bound<'bound>,
     },
     BlockExpr {
-        statements: Vec<(&'bound Ast<'bound>, &'bound Bound<'bound>)>,
-        final_expression_ast: &'bound Ast<'bound>,
+        statements: Vec<Bound<'bound>>,
+        ast: &'bound Ast<'bound>,
         final_expression: &'bound Bound<'bound>,
     },
     Module {
@@ -116,19 +130,30 @@ pub enum Bound<'bound> {
     },
 }
 
+impl BindingState {
+    fn new() -> BindingState {
+        BindingState { gen_id: 0 }
+    }
+
+    pub fn gen_id(&mut self) -> u64 {
+        self.gen_id += 1;
+        self.gen_id
+    }
+}
+
 pub fn bind_top<'bound>(
     arena: &'bound Arena<Bound<'bound>>,
     ast: &'bound Ast<'bound>,
 ) -> Result<Bound<'bound>, Error> {
     let mut top_binder = buck_stops_here_binder::BuckStopsHereBinder;
-
-
-    bind(arena, &mut top_binder, ast)
+    let mut binding_state = BindingState::new();
+    bind(arena, &mut top_binder, &mut binding_state, ast)
 }
 
 fn bind<'bound>(
     arena: &'bound Arena<Bound<'bound>>,
     binder: &mut Binder<'bound>,
+    binding_state: &mut BindingState,
     ast: &'bound Ast<'bound>,
 ) -> Result<Bound<'bound>, Error> {
     let bound = match ast {
@@ -137,20 +162,20 @@ fn bind<'bound>(
         &Ast::Add(ast_left, ast_right) => Bound::Add {
             ast_left,
             ast_right,
-            left: arena.alloc(bind(arena, binder, ast_left)?),
-            right: arena.alloc(bind(arena, binder, ast_right)?),
+            left: arena.alloc(bind(arena, binder, binding_state, ast_left)?),
+            right: arena.alloc(bind(arena, binder, binding_state, ast_right)?),
         },
         &Ast::Sub(ast_left, ast_right) => Bound::Sub {
             ast_left,
             ast_right,
-            left: arena.alloc(bind(arena, binder, ast_left)?),
-            right: arena.alloc(bind(arena, binder, ast_right)?),
+            left: arena.alloc(bind(arena, binder, binding_state, ast_left)?),
+            right: arena.alloc(bind(arena, binder, binding_state, ast_right)?),
         },
         &Ast::Mul(ast_left, ast_right) => Bound::Mul {
             ast_left,
             ast_right,
-            left: arena.alloc(bind(arena, binder, ast_left)?),
-            right: arena.alloc(bind(arena, binder, ast_right)?),
+            left: arena.alloc(bind(arena, binder, binding_state, ast_left)?),
+            right: arena.alloc(bind(arena, binder, binding_state, ast_right)?),
         },
         &Ast::FieldAccess {
             target,
@@ -160,33 +185,54 @@ fn bind<'bound>(
             target_ast: target,
             field_ast: field,
             field_name,
-            target: arena.alloc(bind(arena, binder, target)?),
+            target: arena.alloc(bind(arena, binder, binding_state, target)?),
         },
         &Ast::Div(ast_left, ast_right) => Bound::Div {
             ast_left,
             ast_right,
-            left: arena.alloc(bind(arena, binder, ast_left)?),
-            right: arena.alloc(bind(arena, binder, ast_right)?),
+            left: arena.alloc(bind(arena, binder, binding_state, ast_left)?),
+            right: arena.alloc(bind(arena, binder, binding_state, ast_right)?),
         },
         &Ast::Pipeline(ast_left, ast_right) => Bound::Pipeline {
             ast_left,
             ast_right,
-            left: arena.alloc(bind(arena, binder, ast_left)?),
-            right: arena.alloc(bind(arena, binder, ast_right)?),
+            left: arena.alloc(bind(arena, binder, binding_state, ast_left)?),
+            right: arena.alloc(bind(arena, binder, binding_state, ast_right)?),
         },
         &Ast::Identifier(_, ident) => Bound::Identifier {
             ast,
             ident,
-            binding_kind: binder.lookup(ident)?,
+            binding_kind: binder.lookup(&DeclarationKind::Named(ident.into()))?,
         },
         &Ast::FunctionCall { target, ref args } => Bound::FunctionCall {
             ast,
-            target: arena.alloc(bind(arena, binder, target)?),
+            target: arena.alloc(bind(arena, binder, binding_state, target)?),
             args: args.iter()
-                .map(|arg| bind(arena, binder, arg))
+                .map(|arg| bind(arena, binder, binding_state, arg))
                 .collect::<Result<Vec<_>, _>>()?,
         },
-        &Ast::BlockExpr { .. } => unimplemented!(),
+        &Ast::BlockExpr {
+            ref statements,
+            ref final_expression,
+        } => {
+            let mut block_binder = block_binder::BlockBinder {
+                parent: binder,
+                definitions: HashMap::new(),
+            };
+            Bound::BlockExpr {
+                statements: statements
+                    .iter()
+                    .map(|a| bind(arena, &mut block_binder, binding_state, a))
+                    .collect::<Result<Vec<_>, _>>()?,
+                final_expression: arena.alloc(bind(
+                    arena,
+                    &mut block_binder,
+                    binding_state,
+                    final_expression,
+                )?),
+                ast: ast,
+            }
+        }
         &Ast::Module {
             ref statements,
             module_id,
@@ -199,7 +245,7 @@ fn bind<'bound>(
                 ast,
                 statements: statements
                     .iter()
-                    .map(|stmt| bind(arena, &mut module_binder, stmt))
+                    .map(|stmt| bind(arena, &mut module_binder, binding_state, stmt))
                     .collect::<Result<Vec<_>, _>>()?,
                 binder: module_binder,
             }
@@ -211,15 +257,15 @@ fn bind<'bound>(
         } => Bound::VariableDecl {
             name,
             expression_ast: expression,
-            expression: arena.alloc(bind(arena, binder, expression)?),
-            location: binder.add_declaration(name),
+            expression: arena.alloc(bind(arena, binder, binding_state, expression)?),
+            location: binder.add_declaration(DeclarationKind::Named(name.into()), binding_state),
         },
         &Ast::FunctionDecl {
             name,
             ref params,
             body,
             ..
-        } => fn_binder::bind_function_decl(binder, ast, arena, name, params, body)?,
+        } => fn_binder::bind_function_decl(binder, ast, arena, binding_state, name, params, body)?,
     };
 
     Ok(bound)

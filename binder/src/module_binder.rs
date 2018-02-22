@@ -4,24 +4,28 @@ use std::collections::HashSet;
 #[derive(Debug)]
 pub struct ModuleBinder {
     pub module_id: u32,
-    pub definitions: HashSet<String>,
+    pub definitions: HashSet<DeclarationKind>,
 }
 
 impl<'bound> Binder<'bound> for ModuleBinder {
-    fn add_declaration(&mut self, symbol: &'bound str) -> BindingKind {
-        self.definitions.insert(symbol.into());
+    fn add_declaration(&mut self, symbol: DeclarationKind, _: &mut BindingState) -> BindingKind {
+        self.definitions.insert(symbol.clone());
         BindingKind::Module {
             module_id: self.module_id,
-            symbol: Rc::new(symbol.into()),
+            symbol: Rc::new(symbol),
         }
     }
-    fn lookup(&mut self, symbol: &str) -> Result<BindingKind, Error> {
+    fn lookup(&mut self, symbol: &DeclarationKind) -> Result<BindingKind, Error> {
         if self.definitions.contains(symbol) {
             return Ok(BindingKind::Module {
                 module_id: self.module_id,
-                symbol: Rc::new(symbol.into()),
+                symbol: Rc::new(symbol.clone()),
             });
         }
-        return Err(Error::UnboundIdentifier(symbol.into()));
+
+        match symbol {
+            &DeclarationKind::Named(ref s) => Err(Error::UnboundIdentifier(s.clone())),
+            &DeclarationKind::Generated(_, ref s) => Err(Error::UnboundIdentifier(s.clone())),
+        }
     }
 }
