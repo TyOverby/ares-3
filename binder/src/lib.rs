@@ -17,13 +17,13 @@ use typed_arena::Arena;
 use module_binder::ModuleBinder;
 
 #[derive(Debug)]
-pub enum BindingKind {
+pub enum BindingKind<'bound> {
     FunctionLocal(u32),
     Argument(u32),
     Upvar(u32),
     Module {
         module_id: u32,
-        symbol: Rc<DeclarationKind>,
+        symbol: Rc<DeclarationKind<'bound>>,
     },
 }
 
@@ -37,14 +37,14 @@ pub enum Error {
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub enum DeclarationKind {
-    Named(String),
-    Generated(u64, String),
+pub enum DeclarationKind<'bound> {
+    Named(&'bound str),
+    Generated(u64, &'bound str),
 }
 
 pub trait Binder<'bound> {
-    fn add_declaration(&mut self, symbol: DeclarationKind, &mut BindingState) -> BindingKind;
-    fn lookup(&mut self, symbol: &DeclarationKind) -> Result<BindingKind, Error>;
+    fn add_declaration(&mut self, symbol: DeclarationKind<'bound>, &mut BindingState) -> BindingKind<'bound>;
+    fn lookup(&mut self, symbol: &DeclarationKind<'bound>) -> Result<BindingKind<'bound>, Error>;
 }
 
 #[derive(Debug)]
@@ -60,7 +60,7 @@ pub enum Bound<'bound> {
     Identifier {
         ast: &'bound Ast<'bound>,
         ident: &'bound str,
-        binding_kind: BindingKind,
+        binding_kind: BindingKind<'bound>,
     },
     FunctionCall {
         ast: &'bound Ast<'bound>,
@@ -99,18 +99,18 @@ pub enum Bound<'bound> {
     },
     FunctionDecl {
         name: &'bound str,
-        params: Vec<(DeclarationKind, &'bound Ast<'bound>)>,
+        params: Vec<(DeclarationKind<'bound>, &'bound Ast<'bound>)>,
         body: &'bound Bound<'bound>,
-        locals: Vec<DeclarationKind>,
-        upvars: HashMap<DeclarationKind, (BindingKind, u32)>,
+        locals: Vec<DeclarationKind<'bound>>,
+        upvars: HashMap<DeclarationKind<'bound>, (BindingKind<'bound>, u32)>,
         ast: &'bound Ast<'bound>,
-        location: BindingKind,
+        location: BindingKind<'bound>,
     },
     VariableDecl {
         name: &'bound str,
         expression_ast: &'bound Ast<'bound>,
         expression: &'bound Bound<'bound>,
-        location: BindingKind,
+        location: BindingKind<'bound>,
     },
     FieldAccess {
         target_ast: &'bound Ast<'bound>,
@@ -126,7 +126,7 @@ pub enum Bound<'bound> {
     Module {
         ast: &'bound Ast<'bound>,
         statements: Vec<Bound<'bound>>,
-        binder: ModuleBinder,
+        binder: ModuleBinder<'bound>,
     },
 }
 

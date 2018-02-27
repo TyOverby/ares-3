@@ -2,20 +2,25 @@ use super::*;
 use std::collections::HashSet;
 
 #[derive(Debug)]
-pub struct ModuleBinder {
+pub struct ModuleBinder<'bound> {
     pub module_id: u32,
-    pub definitions: HashSet<DeclarationKind>,
+    pub definitions: HashSet<DeclarationKind<'bound>>,
 }
 
-impl<'bound> Binder<'bound> for ModuleBinder {
-    fn add_declaration(&mut self, symbol: DeclarationKind, _: &mut BindingState) -> BindingKind {
+impl<'bound> Binder<'bound> for ModuleBinder<'bound> {
+    fn add_declaration(
+        &mut self,
+        symbol: DeclarationKind<'bound>,
+        _: &mut BindingState,
+    ) -> BindingKind<'bound> {
         self.definitions.insert(symbol.clone());
         BindingKind::Module {
             module_id: self.module_id,
             symbol: Rc::new(symbol),
         }
     }
-    fn lookup(&mut self, symbol: &DeclarationKind) -> Result<BindingKind, Error> {
+
+    fn lookup(&mut self, symbol: &DeclarationKind<'bound>) -> Result<BindingKind<'bound>, Error> {
         if self.definitions.contains(symbol) {
             return Ok(BindingKind::Module {
                 module_id: self.module_id,
@@ -24,8 +29,8 @@ impl<'bound> Binder<'bound> for ModuleBinder {
         }
 
         match symbol {
-            &DeclarationKind::Named(ref s) => Err(Error::UnboundIdentifier(s.clone())),
-            &DeclarationKind::Generated(_, ref s) => Err(Error::UnboundIdentifier(s.clone())),
+            &DeclarationKind::Named(s) => Err(Error::UnboundIdentifier(s.into())),
+            &DeclarationKind::Generated(_, s) => Err(Error::UnboundIdentifier(s.into())),
         }
     }
 }

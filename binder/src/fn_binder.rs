@@ -3,19 +3,19 @@ use std::collections::HashMap;
 
 pub struct FnBinder<'a, 'bound: 'a> {
     parent: &'a mut Binder<'bound>,
-    locals: Vec<DeclarationKind>,
+    locals: Vec<DeclarationKind<'bound>>,
     arguments: &'bound [(&'bound str, &'bound Ast<'bound>)],
-    upvars: HashMap<DeclarationKind, (BindingKind, u32)>,
+    upvars: HashMap<DeclarationKind<'bound>, (BindingKind<'bound>, u32)>,
 }
 
 impl<'a, 'bound> Binder<'bound> for FnBinder<'a, 'bound> {
-    fn add_declaration(&mut self, symbol: DeclarationKind, _: &mut BindingState) -> BindingKind {
+    fn add_declaration(&mut self, symbol: DeclarationKind<'bound>, _: &mut BindingState) -> BindingKind<'bound> {
         let pos = self.locals.len();
         self.locals.push(symbol);
         BindingKind::FunctionLocal(pos as u32)
     }
 
-    fn lookup(&mut self, symbol: &DeclarationKind) -> Result<BindingKind, Error> {
+    fn lookup(&mut self, symbol: &DeclarationKind<'bound>) -> Result<BindingKind<'bound>, Error> {
         if let Some(pos) = self.arguments
             .iter()
             .rposition(|&(l, _)| &DeclarationKind::Named(l.into()) == symbol)
@@ -35,8 +35,8 @@ impl<'a, 'bound> Binder<'bound> for FnBinder<'a, 'bound> {
         }
 
         match symbol {
-            &DeclarationKind::Named(ref s) => Err(Error::UnboundIdentifier(s.clone())),
-            &DeclarationKind::Generated(_, ref s) => Err(Error::UnboundIdentifier(s.clone())),
+            &DeclarationKind::Named(s) => Err(Error::UnboundIdentifier(s.into())),
+            &DeclarationKind::Generated(_, s) => Err(Error::UnboundIdentifier(s.into())),
         }
     }
 }
