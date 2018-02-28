@@ -29,7 +29,7 @@ where
 
     remove_whitespace(&mut lexed);
     let mut cache = HashMap::new();
-    let parsed = parse_module(&lexed, 0, &parse_arena, &mut cache).unwrap();
+    let parsed = parse_module(&lexed, "my_module", &parse_arena, &mut cache).unwrap();
     let bound = bind_top(&bind_arena, parsed.0);
     f(bound)
 }

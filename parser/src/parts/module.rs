@@ -2,7 +2,7 @@ use ::*;
 
 pub fn parse_module<'parse>(
     mut tokens: &'parse [Token<'parse>],
-    module_id: u32,
+    module_id: &'parse str,
     arena: Arena<'parse>,
     cache: &mut ParseCache<'parse>,
 ) -> Result<'parse> {

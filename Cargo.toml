@@ -1,3 +1,3 @@
 [workspace]
 
-members = ["vm", "linked-stack", "lexer", "parser", "binder"]
+members = ["vm", "linked-stack", "lexer", "parser", "binder", "emit"]

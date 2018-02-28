@@ -2,7 +2,7 @@ use vm::*;
 use vm;
 use self::Instruction::*;
 use value::Value::*;
-use value::{AresMap, Value, new_func, Function};
+use value::{new_func, AresMap, Function, Value};
 
 fn symval(v: &str) -> Value {
     Value::Symbol(vm::Symbol(v.into()))
@@ -245,4 +245,26 @@ fn reset_using_shift_expression() {
 
     let mut vm = Vm::new(main);
     assert_eq!(vm.run(), Ok(Integer(15)));
+}
+
+
+#[test]
+fn setting_module_variables() {
+    let main = new_func(Function {
+        name: Some("main2".into()),
+        arg_count: 0,
+        instructions: vec![
+            Push(Integer(5)),
+            Push(symval("variable_name")),
+            Push(symval("module_name")),
+            ModuleAdd,
+            Push(symval("variable_name")),
+            Push(symval("module_name")),
+            ModuleGet,
+            Ret,
+        ],
+    });
+
+    let mut vm = Vm::new(main);
+    assert_eq!(vm.run(), Ok(Integer(5)));
 }

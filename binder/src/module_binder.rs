@@ -3,7 +3,7 @@ use std::collections::HashSet;
 
 #[derive(Debug)]
 pub struct ModuleBinder<'bound> {
-    pub module_id: u32,
+    pub module_id: &'bound str,
     pub definitions: HashSet<DeclarationKind<'bound>>,
 }
 

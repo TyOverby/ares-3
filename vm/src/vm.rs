@@ -1,5 +1,6 @@
 use linked_stack::{LinkedStack, LinkedStackBehavior};
 use value::{AresMap, Continuation, ContinuationPtr, FunctionPtr, Value, ValueKind};
+use std::collections::HashMap;
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
 #[derive(Clone, Eq, PartialEq, Hash, PartialOrd, Serialize, Deserialize)]
@@ -38,19 +39,30 @@ pub enum VmError {
     TagNotFound(Symbol),
     UnexpectedType { expected: ValueKind, found: Value },
     RanOutOfInstructions,
+    NoModuleDefinition { module: Symbol, definition: Symbol },
 }
 
 #[derive(Clone, PartialEq, Debug, PartialOrd, Serialize, Deserialize)]
 pub enum Instruction {
     Add,
+    Sub,
+    Mul,
+    Div,
+
     Push(Value),
+    Pop,
     Dup,
+
     Print,
+
     Call,
     Ret,
     Reset,
     Shift,
     Resume,
+
+    ModuleAdd,
+    ModuleGet,
 
     MapEmpty,
     MapInsert,
@@ -67,6 +79,7 @@ pub struct FuncExecData {
 pub struct Vm {
     pub(crate) stack: ValueStack,
     pub(crate) debug_values: Vec<Value>,
+    pub(crate) modules: HashMap<(Symbol, Symbol), Value>,
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -87,6 +100,7 @@ impl Vm {
         Vm {
             stack: ValueStack::new(exec_data),
             debug_values: vec![],
+            modules: HashMap::new(),
         }
     }
 
@@ -123,8 +137,49 @@ impl Vm {
                 let r = self.stack.pop()?.into_int()?;
                 self.stack.push(Value::Integer(l + r))?;
             }
+            Sub => {
+                let l = self.stack.pop()?.into_int()?;
+                let r = self.stack.pop()?.into_int()?;
+                self.stack.push(Value::Integer(l - r))?;
+            }
+            Mul => {
+                let l = self.stack.pop()?.into_int()?;
+                let r = self.stack.pop()?.into_int()?;
+                self.stack.push(Value::Integer(l * r))?;
+            }
+            Div => {
+                let l = self.stack.pop()?.into_int()?;
+                let r = self.stack.pop()?.into_int()?;
+                self.stack.push(Value::Integer(l / r))?;
+            }
+
             Push(v) => {
                 self.stack.push(v)?;
+            }
+            Pop => {
+                self.stack.pop()?;
+            }
+
+            ModuleAdd => {
+                let module_name = self.stack.pop()?.into_symbol()?;
+                let definition_name = self.stack.pop()?.into_symbol()?;
+                let value = self.stack.pop()?;
+                self.modules.insert((module_name, definition_name), value);
+            }
+            ModuleGet => {
+                let module_name = self.stack.pop()?.into_symbol()?;
+                let definition_name = self.stack.pop()?.into_symbol()?;
+                let value = self.modules
+                    .get(&(module_name.clone(), definition_name.clone()));
+
+                let value = value.ok_or_else(|| {
+                    VmError::NoModuleDefinition {
+                        module: module_name,
+                        definition: definition_name,
+                    }
+                })?;
+
+                self.stack.push(value.clone())?;
             }
 
             MapEmpty => {

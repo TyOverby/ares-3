@@ -85,7 +85,7 @@ pub enum Ast<'parse> {
     },
     Module {
         statements: Vec<&'parse Ast<'parse>>,
-        module_id: u32,
+        module_id: &'parse str,
     },
     BlockExpr {
         statements: Vec<&'parse Ast<'parse>>,

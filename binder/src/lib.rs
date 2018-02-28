@@ -22,7 +22,7 @@ pub enum BindingKind<'bound> {
     Argument(u32),
     Upvar(u32),
     Module {
-        module_id: u32,
+        module_id: &'bound str,
         symbol: Rc<DeclarationKind<'bound>>,
     },
 }

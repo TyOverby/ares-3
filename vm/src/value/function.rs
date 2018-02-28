@@ -6,7 +6,7 @@ use std::fmt::{Debug, Formatter, Result as FmtResult};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct FunctionPtr {
-    function: Rc<RefCell<Function>>,
+    pub function: Rc<RefCell<Function>>,
 }
 
 impl Deref for FunctionPtr {
