@@ -116,8 +116,7 @@ fn test_function_call() {
             Push(Integer(5)),
             Push(Integer(6)),
             Push(Function(adder)),
-            Push(Integer(2)),
-            Call,
+            Call(2),
             Ret,
         ],
     });
@@ -137,7 +136,7 @@ fn recursive_fn() {
     let recursive_infinite = new_func(Function {
         name: Some("recursive infinite".into()),
         arg_count: 0,
-        instructions: vec![Push(Function(nullfunc)), Push(Integer(0)), Call],
+        instructions: vec![Push(Function(nullfunc)), Call(0)],
     });
 
     if let &mut Push(ref mut f) = &mut recursive_infinite.borrow_mut().instructions[0] {
@@ -146,7 +145,6 @@ fn recursive_fn() {
 
     let mut vm = Vm::new(recursive_infinite);
     for i in 0..100 {
-        vm.step().unwrap();
         vm.step().unwrap();
         vm.step().unwrap();
         assert_eq!(vm.stack.link_len(), i + 2);

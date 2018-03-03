@@ -166,6 +166,10 @@ macro_rules! impl_for_variant {
 }
 
 impl Value {
+    pub fn symbol<S: Into<String>>(s: S) -> Value {
+        Value::Symbol(Symbol(s.into()))
+    }
+
     impl_for_variant!(is_int, into_int, as_int, Integer, i64);
     impl_for_variant!(is_float, into_float, as_float, Float, f64);
     impl_for_variant!(is_symbol, into_symbol, as_symbol, Symbol, Symbol);

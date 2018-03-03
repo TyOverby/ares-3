@@ -39,19 +39,19 @@ fn remove_whitespace(tokens: &mut Vec<Token>) {
 #[test]
 fn emit_module_with_expression_statement() {
     let instrs = emit_module("5;");
-    assert_eq!(instrs, vec![Push(Value::Integer(5)), Pop]);
+    assert_eq!(&instrs, &[Push(Value::Integer(5)), Pop]);
 }
 
 #[test]
 fn emit_module_with_variable_declaration() {
     let instrs = emit_module("let x = 5;");
     assert_eq!(
-        instrs,
-        vec![
+        &instrs,
+        &[
             Push(Value::Integer(5)),
-            Push(Value::Symbol(Symbol("my_module".into()))),
-            Push(Value::Symbol(Symbol("x".into()))),
-            ModuleAdd,
+            Push(Value::symbol("my_module")),
+            Push(Value::symbol("x")),
+            ModuleAdd
         ]
     );
 }
@@ -60,16 +60,34 @@ fn emit_module_with_variable_declaration() {
 fn emit_module_with_variable_declaration_and_variable_access() {
     let instrs = emit_module("let x = 5; x;");
     assert_eq!(
-        instrs,
-        vec![
+        &instrs,
+        &[
             Push(Value::Integer(5)),
-            Push(Value::Symbol(Symbol("my_module".into()))),
-            Push(Value::Symbol(Symbol("x".into()))),
+            Push(Value::symbol("my_module")),
+            Push(Value::symbol("x")),
             ModuleAdd,
-            Push(Value::Symbol(Symbol("my_module".into()))),
-            Push(Value::Symbol(Symbol("x".into()))),
+            Push(Value::symbol("my_module")),
+            Push(Value::symbol("x")),
             ModuleGet,
-            Pop,
+            Pop
+        ]
+    );
+}
+
+#[test]
+fn emit_fn_delcaration() {
+    let instrs = emit_module("let id(x) = x;");
+    assert_eq!(
+        &instrs[..],
+        &[
+            Push(Value::Function(new_func(Function {
+                instructions: vec![GetFromStackPosition(0)],
+                name: Some("id".into()),
+                arg_count: 1,
+            }))),
+            Push(Value::symbol("my_module")),
+            Push(Value::symbol("id")),
+            ModuleAdd
         ]
     );
 }

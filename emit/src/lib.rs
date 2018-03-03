@@ -6,50 +6,47 @@ extern crate vm;
 
 #[cfg(test)]
 mod test;
+mod function_info;
 
 use binder::{BindingKind, Bound, DeclarationKind};
 use vm::value::{new_func, Function, Value};
 use vm::vm::{Instruction, Symbol};
-use std::ops::Deref;
+use function_info::*;
 
 pub fn emit_top(node: &Bound) -> Value {
     match node {
         &Bound::Module { ref statements, .. } => {
-            Value::Function(new_func(emit_function(statements, true)))
+            let mut instructions = vec![];
+            for statement in statements {
+                if emit(statement, &mut instructions, None) {
+                    instructions.push(Instruction::Pop);
+                }
+            }
+
+            Value::Function(new_func(Function {
+                instructions,
+                name: None,
+                arg_count: 0,
+            }))
         }
         _ => panic!(),
     }
 }
 
-pub fn emit_function(statements: &[Bound], is_module: bool) -> Function {
-    let mut instrs = vec![];
-    for statement in &statements[..statements.len() - 1] {
-        if emit(statement, &mut instrs) {
-            instrs.push(Instruction::Pop);
-        }
-    }
-    if let Some(last_expression) = statements.last() {
-        if emit(last_expression, &mut instrs) && is_module {
-            instrs.push(Instruction::Pop);
-        }
-    }
-
-    Function {
-        arg_count: 0,
-        name: None,
-        instructions: instrs,
-    }
-}
-
-pub fn emit(node: &Bound, out: &mut Vec<Instruction>) -> bool {
+pub fn emit(
+    node: &Bound,
+    out: &mut Vec<Instruction>,
+    current_function: Option<FunctionInfo>,
+) -> bool {
     fn emit_binary(
         left: &Bound,
         right: &Bound,
         out: &mut Vec<Instruction>,
         instruction: Instruction,
+        current_function: Option<FunctionInfo>,
     ) -> bool {
-        assert!(emit(left, out));
-        assert!(emit(right, out));
+        assert!(emit(left, out, current_function));
+        assert!(emit(right, out, current_function));
         out.push(instruction);
         true
     }
@@ -67,33 +64,33 @@ pub fn emit(node: &Bound, out: &mut Vec<Instruction>) -> bool {
             ref left,
             ref right,
             ..
-        } => emit_binary(left, right, out, Instruction::Add),
+        } => emit_binary(left, right, out, Instruction::Add, current_function),
         &Bound::Sub {
             ref left,
             ref right,
             ..
-        } => emit_binary(left, right, out, Instruction::Sub),
+        } => emit_binary(left, right, out, Instruction::Sub, current_function),
         &Bound::Mul {
             ref left,
             ref right,
             ..
-        } => emit_binary(left, right, out, Instruction::Mul),
+        } => emit_binary(left, right, out, Instruction::Mul, current_function),
         &Bound::Div {
             ref left,
             ref right,
             ..
-        } => emit_binary(left, right, out, Instruction::Div),
+        } => emit_binary(left, right, out, Instruction::Div, current_function),
         &Bound::BlockExpr {
             ref statements,
             ref final_expression,
             ..
         } => {
             for statement in statements {
-                if emit(statement, out) {
+                if emit(statement, out, current_function) {
                     out.push(Instruction::Pop);
                 }
             }
-            assert!(emit(final_expression, out));
+            assert!(emit(final_expression, out, current_function));
             true
         }
         &Bound::FieldAccess {
@@ -101,26 +98,17 @@ pub fn emit(node: &Bound, out: &mut Vec<Instruction>) -> bool {
             field_name,
             ..
         } => {
-            assert!(emit(target, out));
+            assert!(emit(target, out, current_function));
             out.push(Instruction::Push(Value::Symbol(Symbol(field_name.into()))));
             out.push(Instruction::MapGet);
             true
         }
-        &Bound::Identifier {
-            binding_kind:
-                BindingKind::Module {
-                    module_id,
-                    ref symbol,
-                },
-            ..
-        } => {
-            let stringed = match symbol.deref() {
-                &DeclarationKind::Named(s) => s.into(),
-                &DeclarationKind::Generated(n, s) => format!("{}${}", s, n),
-            };
-            out.push(Instruction::Push(Value::Symbol(Symbol(module_id.into()))));
-            out.push(Instruction::Push(Value::Symbol(Symbol(stringed))));
-            out.push(Instruction::ModuleAdd);
+        &Bound::Identifier { ref binding_kind, .. } => {
+            if let Some(ref fi) = current_function {
+                fi.emit_binding_kind_getter(binding_kind, out);
+            } else {
+                fallback_emit_binding_kind_getter(binding_kind, out);
+            }
             true
         }
         &Bound::VariableDecl {
@@ -128,28 +116,54 @@ pub fn emit(node: &Bound, out: &mut Vec<Instruction>) -> bool {
             ref location,
             ..
         } => {
-            assert!(emit(expression, out));
+            assert!(emit(expression, out, current_function));
 
-            match location {
-                &BindingKind::FunctionLocal(_local_idx) => unimplemented!(),
-                &BindingKind::Argument(_arg_index) => unimplemented!(),
-                &BindingKind::Upvar(_upvar_index) => unimplemented!(),
-                &BindingKind::Module {
-                    module_id,
-                    ref symbol,
-                } => {
-                    let stringed = match symbol.deref() {
-                        &DeclarationKind::Named(s) => s.into(),
-                        &DeclarationKind::Generated(n, s) => format!("{}${}", s, n),
-                    };
-                    out.push(Instruction::Push(Value::Symbol(Symbol(module_id.into()))));
-                    out.push(Instruction::Push(Value::Symbol(Symbol(stringed))));
-                    out.push(Instruction::ModuleAdd);
-                }
+            if let Some(ref fi) = current_function {
+                fi.emit_binding_kind_setter(location, out);
+            } else {
+                fallback_emit_binding_kind_setter(location, out);
             }
 
             false
         }
-        _ => unimplemented!(),
+        &Bound::FunctionDecl {
+            ref params,
+            ref body,
+            ref locals,
+            ref upvars,
+            ref location,
+            name,
+            ..
+        } => {
+            let fn_info = FunctionInfo {
+                args_count: params.len() as u32,
+                upvars_count: upvars.len() as u32,
+                locals_count: locals.len() as u32,
+            };
+
+            if !upvars.is_empty() {
+                panic!();
+            }
+
+            let mut instrs = vec![];
+            assert!(emit(body, &mut instrs, Some(fn_info)));
+
+            let function_value = Value::Function(new_func(Function {
+                instructions: instrs,
+                name: Some(name.into()),
+                arg_count: params.len(),
+            }));
+
+            out.push(Instruction::Push(function_value));
+
+            if let Some(ref fi) = current_function {
+                fi.emit_binding_kind_setter(location, out);
+            } else {
+                fallback_emit_binding_kind_setter(location, out);
+            }
+
+            false
+        }
+        other => unimplemented!("emit({:?}) is not implemented", other),
     }
 }

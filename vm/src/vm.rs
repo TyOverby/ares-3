@@ -50,12 +50,14 @@ pub enum Instruction {
     Div,
 
     Push(Value),
+    GetFromStackPosition(u32),
+    SetToStackPosition(u32),
     Pop,
     Dup,
 
     Print,
 
-    Call,
+    Call(u32),
     Ret,
     Reset,
     Shift,
@@ -153,6 +155,12 @@ impl Vm {
                 self.stack.push(Value::Integer(l / r))?;
             }
 
+            GetFromStackPosition(pos) => {
+                self.stack.dup_from_pos_in_stackframe(pos)?;
+            }
+            SetToStackPosition(pos) => {
+                self.stack.dup_from_pos_in_stackframe(pos)?;
+            }
             Push(v) => {
                 self.stack.push(v)?;
             }
@@ -208,8 +216,7 @@ impl Vm {
             Print => {
                 println!("{:?}", self.stack);
             }
-            Call => {
-                let arg_count = self.stack.pop()?.into_int()?;
+            Call(arg_count) => {
                 let f = self.stack.pop()?.into_function()?;
 
                 if f.borrow().arg_count != arg_count as usize {

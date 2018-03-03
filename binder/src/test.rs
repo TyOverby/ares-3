@@ -144,3 +144,17 @@ fn bind_module_fn_decl_with_bad_reference() {
         matches!(res, Err(Error::UnboundIdentifier(ref s)), &*s == "z");
     });
 }
+
+#[test]
+fn bind_module_fn_decl_with_inner_function() {
+    with_bind("let f(x) = { let g() = 10; g()};", |res| {
+        assert!(res.is_ok());
+    });
+}
+
+#[test]
+fn bind_module_fn_decl_with_upvar() {
+    with_bind("let f(x) = { let g() = x; g()};", |res| {
+        assert!(res.is_ok());
+    });
+}

@@ -55,6 +55,20 @@ where
     }
 }
 
+impl<T, K, A, B: LinkedStackBehavior<Symbol = K>> LinkedStack<T, K, A, B>
+where
+    B: LinkedStackBehavior<Symbol = K>,
+    T: Clone,
+{
+    pub fn dup_from_pos_in_stackframe(&mut self, pos: u32) -> Result<(), B::Error> {
+        if (pos as usize) < self.current.len() {
+            let v = self.current[pos as usize].clone();
+            return self.push(v);
+        } else {
+            return Err(B::overflow());
+        }
+    }
+}
 impl<T, K, A, B: LinkedStackBehavior<Symbol = K>> LinkedStack<T, K, A, B> {
     pub fn new(aux: A) -> LinkedStack<T, K, A, B> {
         LinkedStack {
