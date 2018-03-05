@@ -56,6 +56,7 @@ pub enum Instruction {
     Dup,
 
     Print,
+    Debug,
 
     Call(u32),
     Ret,
@@ -80,7 +81,7 @@ pub struct FuncExecData {
 #[derive(PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub struct Vm {
     pub(crate) stack: ValueStack,
-    pub(crate) debug_values: Vec<Value>,
+    pub debug_values: Vec<Value>,
     pub(crate) modules: HashMap<(Symbol, Symbol), Value>,
 }
 
@@ -215,6 +216,9 @@ impl Vm {
             }
             Print => {
                 println!("{:?}", self.stack);
+            }
+            Debug => {
+                self.debug_values.push(self.stack.pop()?);
             }
             Call(arg_count) => {
                 let f = self.stack.pop()?.into_function()?;

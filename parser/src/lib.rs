@@ -62,6 +62,7 @@ pub enum Ast<'parse> {
         target: &'parse Ast<'parse>,
         args: Vec<&'parse Ast<'parse>>,
     },
+    DebugCall(&'parse Ast<'parse>),
     Pipeline(&'parse Ast<'parse>, &'parse Ast<'parse>),
     Add(&'parse Ast<'parse>, &'parse Ast<'parse>),
     Sub(&'parse Ast<'parse>, &'parse Ast<'parse>),

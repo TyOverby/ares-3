@@ -26,20 +26,10 @@ fn emit_module(input: &str) -> Vec<Instruction> {
     instructions.clone()
 }
 
-fn remove_whitespace(tokens: &mut Vec<Token>) {
-    tokens.retain(|token| {
-        if let TokenKind::Whitespace(_) = token.kind {
-            false
-        } else {
-            true
-        }
-    })
-}
-
 #[test]
 fn emit_module_with_expression_statement() {
     let instrs = emit_module("5;");
-    assert_eq!(&instrs, &[Push(Value::Integer(5)), Pop]);
+    assert_eq!(&instrs, &[Push(Value::Integer(5)), Pop, MapEmpty, Ret]);
 }
 
 #[test]
@@ -51,7 +41,9 @@ fn emit_module_with_variable_declaration() {
             Push(Value::Integer(5)),
             Push(Value::symbol("my_module")),
             Push(Value::symbol("x")),
-            ModuleAdd
+            ModuleAdd,
+            MapEmpty,
+            Ret
         ]
     );
 }
@@ -69,7 +61,9 @@ fn emit_module_with_variable_declaration_and_variable_access() {
             Push(Value::symbol("my_module")),
             Push(Value::symbol("x")),
             ModuleGet,
-            Pop
+            Pop,
+            MapEmpty,
+            Ret
         ]
     );
 }
@@ -87,7 +81,18 @@ fn emit_fn_delcaration() {
             }))),
             Push(Value::symbol("my_module")),
             Push(Value::symbol("id")),
-            ModuleAdd
+            ModuleAdd,
+            MapEmpty,
+            Ret
         ]
+    );
+}
+
+#[test]
+fn emit_debug_statement() {
+    let instrs = emit_module("debug(10);");
+    assert_eq!(
+        &instrs[..],
+        &[Push(Value::Integer(10)), Debug, MapEmpty, Ret]
     );
 }

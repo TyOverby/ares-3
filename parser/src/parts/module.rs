@@ -28,7 +28,7 @@ pub fn parse_module<'parse>(
 fn single_function_call_statement_module() {
     use test_util::with_parsed_module;
 
-    with_parsed_module("abc();", |res| {
+    with_parsed_module("abc();", "module-name", |res| {
         assert!(res.is_ok());
     });
 }
@@ -37,9 +37,9 @@ fn single_function_call_statement_module() {
 fn multiple_function_call_statement_module() {
     use test_util::with_parsed_module;
 
-    with_parsed_module("abc(); def();", |res| {
+    with_parsed_module("abc(); def();", "module-name", |res| {
         let (res, _) = res.unwrap();
-        matches!(res, &Ast::Module{ref statements}, statements.len() == 2);
+        matches!(res, &Ast::Module{ref statements, module_id: "module-name"}, statements.len() == 2);
     });
 }
 
@@ -47,9 +47,9 @@ fn multiple_function_call_statement_module() {
 fn single_let_decl() {
     use test_util::with_parsed_module;
 
-    with_parsed_module("let x = 10;", |res| {
+    with_parsed_module("let x = 10;", "module-name", |res| {
         let (res, _) = res.unwrap();
-        matches!(res, &Ast::Module{ref statements}, statements.len() == 1);
+        matches!(res, &Ast::Module{ref statements, module_id: "module-name"}, statements.len() == 1);
     });
 }
 
@@ -57,8 +57,8 @@ fn single_let_decl() {
 fn multiple_let_decl() {
     use test_util::with_parsed_module;
 
-    with_parsed_module("let x = 10; let y = 20;", |res| {
+    with_parsed_module("let x = 10; let y = 20;", "module-name", |res| {
         let (res, _) = res.unwrap();
-        matches!(res, &Ast::Module{ref statements}, statements.len() == 2);
+        matches!(res, &Ast::Module{ref statements, module_id: "module-name"}, statements.len() == 2);
     });
 }

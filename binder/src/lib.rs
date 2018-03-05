@@ -43,7 +43,11 @@ pub enum DeclarationKind<'bound> {
 }
 
 pub trait Binder<'bound> {
-    fn add_declaration(&mut self, symbol: DeclarationKind<'bound>, &mut BindingState) -> BindingKind<'bound>;
+    fn add_declaration(
+        &mut self,
+        symbol: DeclarationKind<'bound>,
+        &mut BindingState,
+    ) -> BindingKind<'bound>;
     fn lookup(&mut self, symbol: &DeclarationKind<'bound>) -> Result<BindingKind<'bound>, Error>;
 }
 
@@ -61,6 +65,10 @@ pub enum Bound<'bound> {
         ast: &'bound Ast<'bound>,
         ident: &'bound str,
         binding_kind: BindingKind<'bound>,
+    },
+    DebugCall {
+        ast: &'bound Ast<'bound>,
+        arg: &'bound Bound<'bound>,
     },
     FunctionCall {
         ast: &'bound Ast<'bound>,
@@ -203,6 +211,10 @@ fn bind<'bound>(
             ast,
             ident,
             binding_kind: binder.lookup(&DeclarationKind::Named(ident.into()))?,
+        },
+        &Ast::DebugCall(arg) => Bound::DebugCall {
+            ast,
+            arg: arena.alloc(bind(arena, binder, binding_state, arg)?),
         },
         &Ast::FunctionCall { target, ref args } => Bound::FunctionCall {
             ast,

@@ -299,7 +299,7 @@ mod test {
         assert_eq!(stack.link_len(), 1);
         stack.start_segment(None, "hi");
         assert_eq!(stack.link_len(), 2);
-        stack.kill_segment();
+        stack.kill_segment().unwrap();
         assert_eq!(stack.link_len(), 1);
         assert_eq!(*stack.aux(), "hello");
     }
@@ -309,8 +309,8 @@ mod test {
         let mut stack1: TestLinkedStack = LinkedStack::new("hi");
         let mut stack2: TestLinkedStack = LinkedStack::new("bye");
 
-        stack1.push(1);
-        stack2.push(2);
+        stack1.push(1).unwrap();
+        stack2.push(2).unwrap();
 
         stack1.connect(stack2);
 

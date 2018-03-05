@@ -15,6 +15,10 @@ pub fn parse_statement<'parse>(
     arena: Arena<'parse>,
     cache: &mut ParseCache<'parse>,
 ) -> Result<'parse> {
+    if let Ok(res) = parse_debug_call(tokens, arena, cache) {
+        return Ok(res);
+    }
+
     if let Ok(res) = parse_expression_statement(tokens, arena, cache) {
         return Ok(res);
     }

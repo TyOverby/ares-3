@@ -23,6 +23,9 @@ pub fn emit_top(node: &Bound) -> Value {
                 }
             }
 
+            instructions.push(Instruction::MapEmpty);
+            instructions.push(Instruction::Ret);
+
             Value::Function(new_func(Function {
                 instructions,
                 name: None,
@@ -59,6 +62,11 @@ pub fn emit(
         &Bound::Float { value, .. } => {
             out.push(Instruction::Push(Value::Float(value)));
             true
+        }
+        &Bound::DebugCall { arg, .. } => {
+            assert!(emit(arg, out, current_function));
+            out.push(Instruction::Debug);
+            false
         }
         &Bound::Add {
             ref left,
@@ -103,7 +111,9 @@ pub fn emit(
             out.push(Instruction::MapGet);
             true
         }
-        &Bound::Identifier { ref binding_kind, .. } => {
+        &Bound::Identifier {
+            ref binding_kind, ..
+        } => {
             if let Some(ref fi) = current_function {
                 fi.emit_binding_kind_getter(binding_kind, out);
             } else {

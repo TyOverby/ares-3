@@ -11,6 +11,7 @@ pub struct Token<'lex> {
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum TokenKind<'lex> {
+    DebugKeyword,
     OpenParen,
     CloseParen,
     OpenBrace,
@@ -34,6 +35,17 @@ pub enum TokenKind<'lex> {
     Error(&'lex str),
 }
 
+
+pub fn remove_whitespace(tokens: &mut Vec<Token>) {
+    tokens.retain(|token| {
+        if let TokenKind::Whitespace(_) = token.kind {
+            false
+        } else {
+            true
+        }
+    })
+}
+
 pub fn lex<'lex>(input: &'lex str) -> Vec<Token> {
     let table: Vec<(&'static str, Box<Fn(&'lex str) -> TokenKind<'lex>>)> = vec![
         (r"\(", Box::new(|_| TokenKind::OpenParen)),
@@ -49,6 +61,7 @@ pub fn lex<'lex>(input: &'lex str) -> Vec<Token> {
         (r"\+", Box::new(|_| TokenKind::Plus)),
         (r"-", Box::new(|_| TokenKind::Minus)),
         (r"/", Box::new(|_| TokenKind::Div)),
+        (r"(debug)($|[ \n\t\(])", Box::new(|_| TokenKind::DebugKeyword)),
         (r"(let)($|[ \n\t])", Box::new(|_| TokenKind::Let)),
         (r"=", Box::new(|_| TokenKind::Equal)),
         (r"\*", Box::new(|_| TokenKind::Mul)),
@@ -297,6 +310,39 @@ fn lex_let_with_spaces() {
                 kind: TokenKind::Whitespace(" "),
                 start_byte: 3,
                 end_byte: 4,
+            },
+        ]
+    );
+}
+
+#[test]
+fn lex_debug_keyword() {
+    assert_eq!(
+        lex("debug"),
+        vec![
+            Token {
+                kind: TokenKind::DebugKeyword,
+                start_byte: 0,
+                end_byte: 5,
+            },
+        ]
+    );
+}
+
+#[test]
+fn lex_debug_keyword_with_spaces() {
+    assert_eq!(
+        lex("debug "),
+        vec![
+            Token {
+                kind: TokenKind::DebugKeyword,
+                start_byte: 0,
+                end_byte: 5,
+            },
+            Token {
+                kind: TokenKind::Whitespace(" "),
+                start_byte: 5,
+                end_byte: 6,
             },
         ]
     );

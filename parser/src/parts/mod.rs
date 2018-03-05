@@ -10,6 +10,7 @@ mod statement;
 mod let_decl;
 mod block;
 mod module;
+mod debug_call;
 
 pub use self::fn_call::*;
 pub use self::identifier::*;
@@ -23,3 +24,4 @@ pub use self::statement::*;
 pub use self::let_decl::*;
 pub use self::block::*;
 pub use self::module::*;
+pub use self::debug_call::*;
