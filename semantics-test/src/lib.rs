@@ -31,6 +31,7 @@ fn run(program: &str) -> Vec<Value> {
     let parsed = parse_module(&lexed, "my_module", &parse_arena, &mut cache).unwrap();
     let bound = bind_top(&bind_arena, parsed.0).unwrap();
     let emitted = emit_top(&bound);
+    println!("{:#?}", emitted);
     let f = emitted.into_function().unwrap();
 
     let mut vm = vm::vm::Vm::new(f);

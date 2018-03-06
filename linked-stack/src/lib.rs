@@ -89,6 +89,15 @@ impl<T, K, A, B: LinkedStackBehavior<Symbol = K>> LinkedStack<T, K, A, B> {
         }
     }
 
+    pub fn set_to_pos_in_stackframe(&mut self, pos: u32, value: T) -> Result<(), B::Error> {
+        if (pos as usize) < self.current.len() {
+            self.current[pos as usize] = value;
+            Ok(())
+        } else {
+            return Err(B::overflow());
+        }
+    }
+
     pub fn len(&self) -> usize {
         self.current.len() + self.previous.as_ref().map(|n| n.len()).unwrap_or(0)
     }

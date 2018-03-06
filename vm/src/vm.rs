@@ -169,7 +169,8 @@ impl Vm {
                 self.stack.dup_from_pos_in_stackframe(pos)?;
             }
             SetToStackPosition(pos) => {
-                self.stack.dup_from_pos_in_stackframe(pos)?;
+                let value = self.stack.pop()?;
+                self.stack.set_to_pos_in_stackframe(pos, value)?;
             }
             Push(v) => {
                 self.stack.push(v)?;
@@ -239,9 +240,14 @@ impl Vm {
                         actual: arg_count,
                     });
                 }
+
+                let locals_count = f.borrow().locals_count;
                 let upvars = f.borrow().upvars.clone();
-                let exec_data = FuncExecData { function: f, ip: 0 };
+
+                let exec_data = FuncExecData { function: f.clone(), ip: 0 };
                 self.stack.start_segment(None, exec_data);
+
+                self.stack.push(Value::Function(f))?;
 
                 for arg in args {
                     self.stack.push(arg)?;
@@ -249,6 +255,10 @@ impl Vm {
 
                 for upvar in upvars {
                     self.stack.push(upvar.clone())?;
+                }
+
+                for _ in 0..locals_count {
+                    self.stack.push(Value::Integer(9999999999))?;
                 }
             }
             Ret => {

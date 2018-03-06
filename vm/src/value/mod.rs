@@ -87,7 +87,7 @@ impl Debug for Value {
             Value::Float(n) => write!(f, "{}f64", n),
             Value::Symbol(Symbol(ref s)) => write!(f, "'{}", s),
             Value::Function(ref c) => if f.alternate() {
-                write!(f, "{:?}", c.borrow())
+                write!(f, "{:#?}", c.borrow())
             } else {
                 let func = c.borrow();
                 let name = func.name.as_ref().map(|s| s.as_ref());

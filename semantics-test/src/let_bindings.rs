@@ -26,3 +26,24 @@ fn shadowing_in_module_scope() {
     );
     assert_eq!(out, vec![Value::Integer(10), Value::Integer(20)]);
 }
+
+/*
+#[test]
+fn shadowing_in_function_scope() {
+    let out = run(
+        r#"
+    let ff() = {
+        let x = 10;
+        let f() = {debug(x); 0};
+        let x = 20;
+        let g() = {debug(x); 0};
+        f();
+        g();
+        0
+    };
+    ff();
+    "#,
+    );
+    assert_eq!(out, vec![Value::Integer(10), Value::Integer(20)]);
+}
+*/

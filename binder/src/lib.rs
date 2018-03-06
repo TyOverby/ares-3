@@ -21,6 +21,7 @@ pub enum BindingKind<'bound> {
     FunctionLocal(u32),
     Argument(u32),
     Upvar(u32),
+    CurrentFunction,
     Module {
         module_id: &'bound str,
         symbol: Rc<DeclarationKind<'bound>>,

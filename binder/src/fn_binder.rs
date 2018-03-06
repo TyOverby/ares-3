@@ -6,6 +6,7 @@ pub struct FnBinder<'a, 'bound: 'a> {
     locals: Vec<DeclarationKind<'bound>>,
     arguments: &'bound [(&'bound str, &'bound Ast<'bound>)],
     upvars: HashMap<DeclarationKind<'bound>, (BindingKind<'bound>, u32)>,
+    name: &'bound str,
 }
 
 impl<'a, 'bound> Binder<'bound> for FnBinder<'a, 'bound> {
@@ -18,7 +19,7 @@ impl<'a, 'bound> Binder<'bound> for FnBinder<'a, 'bound> {
     fn lookup(&mut self, symbol: &DeclarationKind<'bound>) -> Result<BindingKind<'bound>, Error> {
         if let Some(pos) = self.arguments
             .iter()
-            .rposition(|&(l, _)| &DeclarationKind::Named(l.into()) == symbol)
+            .rposition(|&(l, _)| &DeclarationKind::Named(l) == symbol)
         {
             return Ok(BindingKind::Argument(pos as u32));
         }
@@ -28,6 +29,11 @@ impl<'a, 'bound> Binder<'bound> for FnBinder<'a, 'bound> {
         if let Some(&(_, p)) = self.upvars.get(&symbol) {
             return Ok(BindingKind::Upvar(p));
         }
+
+        if &DeclarationKind::Named(self.name) == symbol {
+            return Ok(BindingKind::CurrentFunction);
+        }
+
         if let Ok(bk) = self.parent.lookup(symbol) {
             let num = self.upvars.len() as u32;
             self.upvars.insert(symbol.clone(), (bk, num));
@@ -57,6 +63,7 @@ pub fn bind_function_decl<'bound>(
             locals: vec![],
             arguments: &params,
             upvars: HashMap::new(),
+            name: name,
         };
 
         let body = arena.alloc(bind(arena, &mut binder, binding_state, body)?);

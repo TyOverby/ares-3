@@ -43,17 +43,18 @@ pub fn fallback_emit_binding_kind_setter(binding_kind: &BindingKind, out: &mut V
 impl FunctionInfo {
     pub fn emit_binding_kind_getter(&self, binding_kind: &BindingKind, out: &mut Vec<Instruction>) {
         match binding_kind {
+            &BindingKind::CurrentFunction => out.push(Instruction::GetFromStackPosition(0)),
             &BindingKind::Argument(arg_index) => {
-                out.push(Instruction::GetFromStackPosition(arg_index));
+                out.push(Instruction::GetFromStackPosition(1 + arg_index));
             }
             &BindingKind::Upvar(upvar_index) => {
                 out.push(Instruction::GetFromStackPosition(
-                    self.args_count + upvar_index,
+                    1 + self.args_count + upvar_index,
                 ));
             }
             &BindingKind::FunctionLocal(local_idx) => {
                 out.push(Instruction::GetFromStackPosition(
-                    self.args_count + self.upvars_count + local_idx,
+                    1 + self.args_count + self.upvars_count + local_idx,
                 ));
             }
             &BindingKind::Module { .. } => {
@@ -64,17 +65,18 @@ impl FunctionInfo {
 
     pub fn emit_binding_kind_setter(&self, binding_kind: &BindingKind, out: &mut Vec<Instruction>) {
         match binding_kind {
+            &BindingKind::CurrentFunction => out.push(Instruction::GetFromStackPosition(0)),
             &BindingKind::Argument(arg_index) => {
-                out.push(Instruction::SetToStackPosition(arg_index));
+                out.push(Instruction::SetToStackPosition(1 + arg_index));
             }
             &BindingKind::Upvar(upvar_index) => {
                 out.push(Instruction::SetToStackPosition(
-                    self.args_count + upvar_index,
+                    1 + self.args_count + upvar_index,
                 ));
             }
             &BindingKind::FunctionLocal(local_idx) => {
                 out.push(Instruction::SetToStackPosition(
-                    self.args_count + self.upvars_count + local_idx,
+                    1 + self.args_count + self.upvars_count + local_idx,
                 ));
             }
             &BindingKind::Module { .. } => {

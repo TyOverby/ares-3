@@ -69,13 +69,37 @@ fn emit_module_with_variable_declaration_and_variable_access() {
 }
 
 #[test]
+fn emit_self_referring_declaration() {
+    let instrs = emit_module("let f() = f;");
+    assert_eq!(
+        &instrs[..],
+        &[
+            Push(Value::Function(new_func(Function {
+                instructions: vec![GetFromStackPosition(0), Ret],
+                name: Some("f".into()),
+                upvars: vec![],
+                args_count: 0,
+                locals_count: 0,
+                upvars_count: 0,
+            }))),
+            BuildFunction,
+            Push(Value::symbol("my_module")),
+            Push(Value::symbol("f")),
+            ModuleAdd,
+            MapEmpty,
+            Ret
+        ]
+    );
+}
+
+#[test]
 fn emit_fn_delcaration() {
     let instrs = emit_module("let id(x) = x;");
     assert_eq!(
         &instrs[..],
         &[
             Push(Value::Function(new_func(Function {
-                instructions: vec![GetFromStackPosition(0), Ret],
+                instructions: vec![GetFromStackPosition(1), Ret],
                 name: Some("id".into()),
                 upvars: vec![],
                 args_count: 1,

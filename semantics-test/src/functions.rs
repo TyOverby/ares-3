@@ -9,7 +9,7 @@ fn no_params() {
 
 #[test]
 fn use_of_parameters() {
-    let out = run(r#"let f(x, y) = x + y; debug(f(1,2));"#);
+    let out = run(r#"let f(x, y) = x + y; debug(f(1, 2));"#);
     assert_eq!(out, vec![Value::Integer(3)]);
 }
 
