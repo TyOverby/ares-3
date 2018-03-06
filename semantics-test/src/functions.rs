@@ -18,3 +18,16 @@ fn function_returning_function() {
     let out = run(r#"let f() = {let g() = 10; g}; debug(f()());"#);
     assert_eq!(out, vec![Value::Integer(10)]);
 }
+
+#[test]
+fn function_returning_self() {
+    let out = run(
+        r#"
+    let f() = {debug(0); f};
+    let g = f();
+    let h = g();
+    h();
+    "#,
+    );
+    assert_eq!(out, vec![Value::Integer(0), Value::Integer(0), Value::Integer(0)]);
+}
