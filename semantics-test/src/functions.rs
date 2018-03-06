@@ -29,5 +29,8 @@ fn function_returning_self() {
     h();
     "#,
     );
-    assert_eq!(out, vec![Value::Integer(0), Value::Integer(0), Value::Integer(0)]);
+    assert_eq!(
+        out,
+        vec![Value::Integer(0), Value::Integer(0), Value::Integer(0)]
+    );
 }
