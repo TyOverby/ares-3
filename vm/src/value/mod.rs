@@ -94,12 +94,12 @@ impl Debug for Value {
                 write!(f, "function {}", name.unwrap_or("<unnamed>"))
             },
             Value::Continuation(ref c) => if f.alternate() {
-                write!(f, "{:?}", c)
+                write!(f, "{:#?}", c)
             } else {
                 write!(f, "<continuation>")
             },
             Value::List(ref o) => {
-                write!(f, "List [")?;
+                write!(f, "[")?;
                 if f.alternate() {
                     write!(f, "\n")?
                 }
@@ -112,10 +112,10 @@ impl Debug for Value {
                 if f.alternate() {
                     write!(f, "\n")?
                 }
-                write!(f, "}}")
+                write!(f, "]")
             }
             Value::Map(ref o) => {
-                write!(f, "Map {{")?;
+                write!(f, "{{")?;
                 if f.alternate() {
                     write!(f, "\n")?
                 }
