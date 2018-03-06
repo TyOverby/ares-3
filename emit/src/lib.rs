@@ -28,8 +28,11 @@ pub fn emit_top(node: &Bound) -> Value {
 
             Value::Function(new_func(Function {
                 instructions,
+                upvars: vec![],
                 name: None,
-                arg_count: 0,
+                args_count: 0,
+                upvars_count: 0,
+                locals_count: 0,
             }))
         }
         _ => panic!(),
@@ -136,6 +139,18 @@ pub fn emit(
 
             false
         }
+        &Bound::FunctionCall {
+            ref target,
+            ref args,
+            ..
+        } => {
+            assert!(emit(target, out, current_function));
+            for arg in args {
+                assert!(emit(arg, out, current_function));
+            }
+            out.push(Instruction::Call(args.len() as u32));
+            true
+        }
         &Bound::FunctionDecl {
             ref params,
             ref body,
@@ -151,20 +166,29 @@ pub fn emit(
                 locals_count: locals.len() as u32,
             };
 
-            if !upvars.is_empty() {
-                panic!();
-            }
-
             let mut instrs = vec![];
             assert!(emit(body, &mut instrs, Some(fn_info)));
+            instrs.push(Instruction::Ret);
 
             let function_value = Value::Function(new_func(Function {
                 instructions: instrs,
+                upvars: vec![],
                 name: Some(name.into()),
-                arg_count: params.len(),
+                args_count: params.len() as u32,
+                upvars_count: upvars.len() as u32,
+                locals_count: locals.len() as u32,
             }));
 
+            for (_, &(ref upvar, _)) in upvars {
+                if let Some(ref fi) = current_function {
+                    fi.emit_binding_kind_getter(upvar, out);
+                } else {
+                    fallback_emit_binding_kind_getter(upvar, out);
+                }
+            }
+
             out.push(Instruction::Push(function_value));
+            out.push(Instruction::BuildFunction);
 
             if let Some(ref fi) = current_function {
                 fi.emit_binding_kind_setter(location, out);

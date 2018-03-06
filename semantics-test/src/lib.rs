@@ -7,6 +7,12 @@ extern crate vm;
 
 use vm::value::Value;
 
+mod debug;
+mod literals;
+mod functions;
+mod math_operators;
+mod let_bindings;
+
 #[allow(dead_code)]
 fn run(program: &str) -> Vec<Value> {
     use std::collections::HashMap;
@@ -31,16 +37,4 @@ fn run(program: &str) -> Vec<Value> {
     vm.run().unwrap();
 
     vm.debug_values
-}
-
-#[test]
-fn test_basic_debug() {
-    let out = run("debug(10);");
-    assert_eq!(out, vec![Value::Integer(10)]);
-}
-
-#[test]
-fn test_multiple_debug() {
-    let out = run("debug(10); debug(20);");
-    assert_eq!(out, vec![Value::Integer(10), Value::Integer(20)]);
 }

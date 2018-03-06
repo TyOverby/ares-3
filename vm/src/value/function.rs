@@ -1,8 +1,8 @@
 use vm::Instruction;
+use super::Value;
 use std::rc::Rc;
 use std::ops::Deref;
 use std::cell::RefCell;
-use std::fmt::{Debug, Formatter, Result as FmtResult};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct FunctionPtr {
@@ -22,24 +22,13 @@ pub fn new_func(f: Function) -> FunctionPtr {
     }
 }
 
-#[derive(PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, PartialOrd, Serialize, Deserialize, Clone)]
 pub struct Function {
     pub name: Option<String>,
-    pub arg_count: usize,
     pub instructions: Vec<Instruction>,
-}
+    pub upvars: Vec<Value>,
 
-impl Debug for Function {
-    fn fmt(&self, f: &mut Formatter) -> FmtResult {
-        let name = if let Some(ref n) = self.name {
-            &n[..]
-        } else {
-            "<unnamed>"
-        };
-
-        f.debug_struct("Function")
-            .field("name", &name)
-            .field("arg_count", &self.arg_count)
-            .finish()
-    }
+    pub args_count: u32,
+    pub upvars_count: u32,
+    pub locals_count: u32,
 }

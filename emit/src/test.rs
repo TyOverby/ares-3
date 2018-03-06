@@ -75,10 +75,14 @@ fn emit_fn_delcaration() {
         &instrs[..],
         &[
             Push(Value::Function(new_func(Function {
-                instructions: vec![GetFromStackPosition(0)],
+                instructions: vec![GetFromStackPosition(0), Ret],
                 name: Some("id".into()),
-                arg_count: 1,
+                upvars: vec![],
+                args_count: 1,
+                locals_count: 0,
+                upvars_count: 0,
             }))),
+            BuildFunction,
             Push(Value::symbol("my_module")),
             Push(Value::symbol("id")),
             ModuleAdd,

@@ -12,8 +12,11 @@ fn symval(v: &str) -> Value {
 fn basic_return_value() {
     let function = new_func(Function {
         name: Some("adder".into()),
-        arg_count: 0,
+        upvars: vec![],
         instructions: vec![Push(Integer(1)), Ret],
+        args_count: 0,
+        upvars_count: 0,
+        locals_count: 0,
     });
 
     let mut vm = Vm::new(function);
@@ -29,8 +32,11 @@ fn basic_return_value() {
 fn empty_map() {
     let function = new_func(Function {
         name: Some("empty_map".into()),
-        arg_count: 0,
+        upvars: vec![],
         instructions: vec![MapEmpty, Ret],
+        args_count: 0,
+        upvars_count: 0,
+        locals_count: 0,
     });
 
     let mut vm = Vm::new(function);
@@ -41,7 +47,7 @@ fn empty_map() {
 fn map_with_some_adds() {
     let function = new_func(Function {
         name: Some("empty_map".into()),
-        arg_count: 0,
+        upvars: vec![],
         instructions: vec![
             Push(Value::Integer(20)),
             Push(Value::Integer(5)),
@@ -49,6 +55,9 @@ fn map_with_some_adds() {
             MapInsert,
             Ret,
         ],
+        args_count: 0,
+        upvars_count: 0,
+        locals_count: 0,
     });
 
     let mut vm = Vm::new(function);
@@ -60,7 +69,7 @@ fn map_with_some_adds() {
 fn map_get() {
     let function = new_func(Function {
         name: Some("empty_map".into()),
-        arg_count: 0,
+        upvars: vec![],
         instructions: vec![
             Push(Value::Integer(20)),
             Push(Value::Integer(5)),
@@ -70,6 +79,9 @@ fn map_get() {
             MapGet,
             Ret,
         ],
+        args_count: 0,
+        upvars_count: 0,
+        locals_count: 0,
     });
 
     let mut vm = Vm::new(function);
@@ -80,8 +92,11 @@ fn map_get() {
 fn bad_map_get() {
     let function = new_func(Function {
         name: Some("empty_map".into()),
-        arg_count: 0,
+        upvars: vec![],
         instructions: vec![MapEmpty, Push(Value::Integer(20)), MapGet, Ret],
+        args_count: 0,
+        upvars_count: 0,
+        locals_count: 0,
     });
 
     let mut vm = Vm::new(function);
@@ -92,8 +107,11 @@ fn bad_map_get() {
 fn test_addition() {
     let function = new_func(Function {
         name: Some("adder".into()),
-        arg_count: 0,
+        upvars: vec![],
         instructions: vec![Push(Integer(5)), Push(Integer(10)), Add, Ret],
+        args_count: 0,
+        upvars_count: 0,
+        locals_count: 0,
     });
 
     let mut vm = Vm::new(function);
@@ -105,20 +123,26 @@ fn test_addition() {
 fn test_function_call() {
     let adder = new_func(Function {
         name: Some("adder".into()),
-        arg_count: 2,
+        upvars: vec![],
         instructions: vec![Add, Ret],
+        args_count: 2,
+        upvars_count: 0,
+        locals_count: 0,
     });
 
     let main = new_func(Function {
         name: Some("main".into()),
-        arg_count: 0,
+        upvars: vec![],
         instructions: vec![
+            Push(Function(adder)),
             Push(Integer(5)),
             Push(Integer(6)),
-            Push(Function(adder)),
             Call(2),
             Ret,
         ],
+        args_count: 0,
+        upvars_count: 0,
+        locals_count: 0,
     });
 
     let mut vm = Vm::new(main);
@@ -129,14 +153,20 @@ fn test_function_call() {
 fn recursive_fn() {
     let nullfunc = new_func(Function {
         name: Some("NULL".into()),
-        arg_count: 0,
+        upvars: vec![],
         instructions: vec![],
+        args_count: 0,
+        upvars_count: 0,
+        locals_count: 0,
     });
 
     let recursive_infinite = new_func(Function {
         name: Some("recursive infinite".into()),
-        arg_count: 0,
+        upvars: vec![],
         instructions: vec![Push(Function(nullfunc)), Call(0)],
+        args_count: 0,
+        upvars_count: 0,
+        locals_count: 0,
     });
 
     if let &mut Push(ref mut f) = &mut recursive_infinite.borrow_mut().instructions[0] {
@@ -155,14 +185,20 @@ fn recursive_fn() {
 fn reset_without_a_shift() {
     let inside_reset = new_func(Function {
         name: Some("inside reset".into()),
-        arg_count: 0,
+        upvars: vec![],
         instructions: vec![Push(Integer(1)), Ret],
+        args_count: 0,
+        upvars_count: 0,
+        locals_count: 0,
     });
 
     let main = new_func(Function {
         name: Some("main".into()),
-        arg_count: 0,
+        upvars: vec![],
         instructions: vec![Push(Function(inside_reset)), Push(symval("hi")), Reset, Ret],
+        args_count: 0,
+        upvars_count: 0,
+        locals_count: 0,
     });
 
     let mut vm = Vm::new(main);
@@ -173,25 +209,34 @@ fn reset_without_a_shift() {
 fn reset_with_an_id_shift() {
     let id = new_func(Function {
         name: Some("id".into()),
-        arg_count: 1,
+        upvars: vec![],
         instructions: vec![Ret],
+        args_count: 1,
+        upvars_count: 0,
+        locals_count: 0,
     });
 
     let reset_closure = new_func(Function {
         name: Some("reset closure".into()),
-        arg_count: 0,
+        upvars: vec![],
         instructions: vec![Push(Function(id)), Push(symval("hi")), Shift, Ret],
+        args_count: 0,
+        upvars_count: 0,
+        locals_count: 0,
     });
 
     let main = new_func(Function {
         name: Some("main".into()),
-        arg_count: 0,
+        upvars: vec![],
         instructions: vec![
             Push(Function(reset_closure)),
             Push(symval("hi")),
             Reset,
             Ret,
         ],
+        args_count: 0,
+        upvars_count: 0,
+        locals_count: 0,
     });
 
     let mut vm = Vm::new(main);
@@ -200,8 +245,11 @@ fn reset_with_an_id_shift() {
 
     let new_main = new_func(Function {
         name: Some("main2".into()),
-        arg_count: 0,
         instructions: vec![Push(v), Push(Integer(5)), Resume, Ret],
+        upvars: vec![],
+        args_count: 0,
+        upvars_count: 0,
+        locals_count: 0,
     });
     let mut vm = Vm::new(new_main);
     assert_eq!(vm.run(), Ok(Integer(5)));
@@ -211,13 +259,16 @@ fn reset_with_an_id_shift() {
 fn reset_using_shift_expression() {
     let id = new_func(Function {
         name: Some("id".into()),
-        arg_count: 1,
         instructions: vec![Ret],
+        upvars: vec![],
+        args_count: 1,
+        upvars_count: 0,
+        locals_count: 0,
     });
 
     let reset_closure = new_func(Function {
         name: Some("reset closure".into()),
-        arg_count: 0,
+        upvars: vec![],
         instructions: vec![
             Push(Integer(10)),
             Push(Function(id)),
@@ -226,11 +277,14 @@ fn reset_using_shift_expression() {
             Add,
             Ret,
         ],
+        args_count: 0,
+        upvars_count: 0,
+        locals_count: 0,
     });
 
     let main = new_func(Function {
         name: Some("main2".into()),
-        arg_count: 0,
+        upvars: vec![],
         instructions: vec![
             Push(Function(reset_closure)),
             Push(symval("hi")),
@@ -239,6 +293,9 @@ fn reset_using_shift_expression() {
             Resume,
             Ret,
         ],
+        args_count: 0,
+        upvars_count: 0,
+        locals_count: 0,
     });
 
     let mut vm = Vm::new(main);
@@ -250,7 +307,7 @@ fn reset_using_shift_expression() {
 fn setting_module_variables() {
     let main = new_func(Function {
         name: Some("main2".into()),
-        arg_count: 0,
+        upvars: vec![],
         instructions: vec![
             Push(Integer(5)),
             Push(symval("variable_name")),
@@ -261,6 +318,9 @@ fn setting_module_variables() {
             ModuleGet,
             Ret,
         ],
+        args_count: 0,
+        upvars_count: 0,
+        locals_count: 0,
     });
 
     let mut vm = Vm::new(main);

@@ -1,50 +1,58 @@
 use ::*;
 
+fn parse_function_call_right<'parse>(
+    tokens: &'parse [Token<'parse>],
+    arena: Arena<'parse>,
+    cache: &mut ParseCache<'parse>,
+    lower: Parser,
+    prev: &'parse Ast<'parse>,
+) -> Result<'parse> {
+    let mut tokens_u = match expect_token_type!(tokens, TokenKind::OpenParen, "open paren") {
+        Ok((_, tokens)) => tokens,
+        Err(_) => return Ok((prev, tokens)),
+    };
+    let mut args = vec![];
+
+    if let Ok((_, tokens)) =
+        expect_token_type!(tokens_u, TokenKind::CloseParen, "close parenthesis")
+    {
+        tokens_u = tokens;
+    } else {
+        loop {
+            let (expr, tokens) = parse_expression(tokens_u, arena, cache)?;
+            args.push(expr);
+            let (comma_or_end, tokens) = expect_token_type!(
+                tokens,
+                TokenKind::CloseParen | TokenKind::Comma,
+                "comma or close parenthesis"
+            )?;
+            tokens_u = tokens;
+            if let &Token {
+                kind: TokenKind::CloseParen,
+                ..
+            } = comma_or_end
+            {
+                break;
+            }
+        }
+    }
+
+    let current = arena.alloc(Ast::FunctionCall {
+        target: prev,
+        args: args,
+    });
+
+    parse_function_call_right(tokens_u, arena, cache, lower, current)
+}
+
 pub fn parse_function_call<'parse>(
     tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
     cache: &mut ParseCache<'parse>,
     lower: Parser,
 ) -> Result<'parse> {
-    let (target, tokens) = lower(tokens, arena, cache)?;
-    let rest: Result = do catch {
-        let mut args = vec![];
-        let (_, mut tokens_u) =
-            expect_token_type!(tokens, TokenKind::OpenParen, "open parenthesis")?;
-
-        if let Ok((_, tokens)) =
-            expect_token_type!(tokens_u, TokenKind::CloseParen, "close parenthesis")
-        {
-            tokens_u = tokens;
-        } else {
-            loop {
-                let (expr, tokens) = parse_expression(tokens_u, arena, cache)?;
-                args.push(expr);
-                let (comma_or_end, tokens) = expect_token_type!(
-                    tokens,
-                    TokenKind::CloseParen | TokenKind::Comma,
-                    "comma or close parenthesis"
-                )?;
-                tokens_u = tokens;
-                if let &Token {
-                    kind: TokenKind::CloseParen,
-                    ..
-                } = comma_or_end
-                {
-                    break;
-                }
-            }
-        }
-
-        Ok((
-            arena.alloc(Ast::FunctionCall {
-                target: target,
-                args: args,
-            }),
-            tokens_u,
-        ))
-    };
-    rest.or(Ok((target, tokens)))
+    let (left, tokens) = lower(tokens, arena, cache)?;
+    parse_function_call_right(tokens, arena, cache, lower, left)
 }
 
 #[test]
@@ -111,5 +119,15 @@ fn nested_function_call() {
                 args.len() == 1
             }
         };
+    });
+}
+
+#[test]
+fn double_function_call() {
+    use test_util::with_parsed_expression;
+
+    with_parsed_expression("f()()", |res| {
+        let (res, _) = res.unwrap();
+        matches!{res, &Ast::FunctionCall{ target: &Ast::FunctionCall{ ..}, ..} };
     });
 }

@@ -1,5 +1,5 @@
 use linked_stack::{LinkedStack, LinkedStackBehavior};
-use value::{AresMap, Continuation, ContinuationPtr, FunctionPtr, Value, ValueKind};
+use value::{new_func, AresMap, Continuation, ContinuationPtr, FunctionPtr, Value, ValueKind};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
@@ -35,7 +35,7 @@ pub enum VmError {
     CrossBoundary,
     KeyNotFound(Value),
     FieldNotFound(Symbol),
-    ArityMismatch { actual: usize, expected: usize },
+    ArityMismatch { actual: u32, expected: u32 },
     TagNotFound(Symbol),
     UnexpectedType { expected: ValueKind, found: Value },
     RanOutOfInstructions,
@@ -58,6 +58,7 @@ pub enum Instruction {
     Print,
     Debug,
 
+    BuildFunction,
     Call(u32),
     Ret,
     Reset,
@@ -93,7 +94,7 @@ pub enum StepResult {
 
 impl Vm {
     pub fn new(function: FunctionPtr) -> Vm {
-        assert_eq!(function.borrow().arg_count, 0);
+        assert_eq!(function.borrow().args_count, 0);
 
         let exec_data = FuncExecData {
             function: function,
@@ -136,26 +137,34 @@ impl Vm {
         use self::Instruction::*;
         match instruction {
             Add => {
-                let l = self.stack.pop()?.into_int()?;
                 let r = self.stack.pop()?.into_int()?;
+                let l = self.stack.pop()?.into_int()?;
                 self.stack.push(Value::Integer(l + r))?;
             }
             Sub => {
-                let l = self.stack.pop()?.into_int()?;
                 let r = self.stack.pop()?.into_int()?;
+                let l = self.stack.pop()?.into_int()?;
                 self.stack.push(Value::Integer(l - r))?;
             }
             Mul => {
-                let l = self.stack.pop()?.into_int()?;
                 let r = self.stack.pop()?.into_int()?;
+                let l = self.stack.pop()?.into_int()?;
                 self.stack.push(Value::Integer(l * r))?;
             }
             Div => {
-                let l = self.stack.pop()?.into_int()?;
                 let r = self.stack.pop()?.into_int()?;
+                let l = self.stack.pop()?.into_int()?;
                 self.stack.push(Value::Integer(l / r))?;
             }
 
+            BuildFunction => {
+                let f = self.stack.pop()?.into_function()?;
+                let mut function = f.borrow().clone();
+                assert!(function.upvars.len() == 0);
+                let upvars = self.stack.pop_n(function.upvars_count as usize)?;
+                function.upvars = upvars;
+                self.stack.push(Value::Function(new_func(function)))?;
+            }
             GetFromStackPosition(pos) => {
                 self.stack.dup_from_pos_in_stackframe(pos)?;
             }
@@ -221,20 +230,25 @@ impl Vm {
                 self.debug_values.push(self.stack.pop()?);
             }
             Call(arg_count) => {
+                let args = self.stack.pop_n(arg_count as usize)?;
                 let f = self.stack.pop()?.into_function()?;
 
-                if f.borrow().arg_count != arg_count as usize {
+                if f.borrow().args_count != arg_count {
                     return Err(VmError::ArityMismatch {
-                        expected: f.borrow().arg_count,
-                        actual: arg_count as usize,
+                        expected: f.borrow().args_count,
+                        actual: arg_count,
                     });
                 }
-
-                let args = self.stack.pop_n(arg_count as usize)?;
+                let upvars = f.borrow().upvars.clone();
                 let exec_data = FuncExecData { function: f, ip: 0 };
                 self.stack.start_segment(None, exec_data);
+
                 for arg in args {
                     self.stack.push(arg)?;
+                }
+
+                for upvar in upvars {
+                    self.stack.push(upvar.clone())?;
                 }
             }
             Ret => {
@@ -249,7 +263,7 @@ impl Vm {
             Reset => {
                 let symbol = self.stack.pop()?.into_symbol()?;
                 let closure = self.stack.pop()?.into_function()?;
-                assert_eq!(closure.borrow().arg_count, 0);
+                assert_eq!(closure.borrow().args_count, 0);
 
                 let exec_data = FuncExecData {
                     function: closure,
@@ -260,7 +274,7 @@ impl Vm {
             Shift => {
                 let symbol = self.stack.pop()?.into_symbol()?;
                 let closure = self.stack.pop()?.into_function()?;
-                assert_eq!(closure.borrow().arg_count, 1);
+                assert_eq!(closure.borrow().args_count, 1);
 
                 let cont_stack = self.stack.split(symbol)?;
                 self.stack.start_segment(
