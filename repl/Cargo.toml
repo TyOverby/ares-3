@@ -1,0 +1,29 @@
+[package]
+name = "repl"
+version = "0.1.0"
+authors = ["Ty Overby <ty@pre-alpha.com>"]
+
+[[bin]]
+name = "ares"
+path = "./src/main.rs"
+
+[dependencies]
+colored = "*"
+linenoise-rust = "*"
+typed-arena = "1.3.0"
+
+[dependencies.lexer]
+path = "../lexer"
+
+[dependencies.parser]
+path = "../parser"
+
+[dependencies.binder]
+path = "../binder"
+
+[dependencies.emit]
+path = "../emit"
+
+[dependencies.vm]
+path = "../vm"
+

@@ -14,7 +14,7 @@ use std::collections::{HashMap, HashSet};
 use parser::Ast;
 use typed_arena::Arena;
 
-use module_binder::ModuleBinder;
+pub use module_binder::ModuleBinder;
 
 #[derive(Debug)]
 pub enum BindingKind<'bound> {
@@ -29,7 +29,7 @@ pub enum BindingKind<'bound> {
 }
 
 pub struct BindingState {
-    gen_id: u64,
+    pub gen_id: u64,
 }
 
 #[derive(Debug)]
@@ -159,7 +159,7 @@ pub fn bind_top<'bound>(
     bind(arena, &mut top_binder, &mut binding_state, ast)
 }
 
-fn bind<'bound>(
+pub fn bind<'bound>(
     arena: &'bound Arena<Bound<'bound>>,
     binder: &mut Binder<'bound>,
     binding_state: &mut BindingState,

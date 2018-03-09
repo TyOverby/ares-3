@@ -116,6 +116,18 @@ impl Vm {
         }
     }
 
+    pub fn run_function(&mut self, function: FunctionPtr) -> VmResult<Value> {
+        assert_eq!(function.borrow().args_count, 0);
+        assert_eq!(self.stack.link_len(), 1);
+
+        let exec_data = FuncExecData {
+            function: function,
+            ip: 0,
+        };
+        self.stack = ValueStack::new(exec_data);
+        self.run()
+    }
+
     pub fn step(&mut self) -> VmResult<StepResult> {
         let instruction = {
             let &FuncExecData {
@@ -244,7 +256,10 @@ impl Vm {
                 let locals_count = f.borrow().locals_count;
                 let upvars = f.borrow().upvars.clone();
 
-                let exec_data = FuncExecData { function: f.clone(), ip: 0 };
+                let exec_data = FuncExecData {
+                    function: f.clone(),
+                    ip: 0,
+                };
                 self.stack.start_segment(None, exec_data);
 
                 self.stack.push(Value::Function(f))?;

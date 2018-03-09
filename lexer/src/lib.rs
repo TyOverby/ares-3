@@ -46,7 +46,7 @@ pub fn remove_whitespace(tokens: &mut Vec<Token>) {
     })
 }
 
-pub fn lex<'lex>(input: &'lex str) -> Vec<Token> {
+pub fn lex<'lex>(input: &'lex str) -> Vec<Token<'lex>> {
     let table: Vec<(&'static str, Box<Fn(&'lex str) -> TokenKind<'lex>>)> = vec![
         (r"\(", Box::new(|_| TokenKind::OpenParen)),
         (r"\)", Box::new(|_| TokenKind::CloseParen)),

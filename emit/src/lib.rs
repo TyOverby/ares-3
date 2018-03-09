@@ -35,7 +35,7 @@ pub fn emit_top(node: &Bound) -> Value {
                 locals_count: 0,
             }))
         }
-        _ => panic!(),
+        b => panic!("unexpected bound node {:?}", b),
     }
 }
 
