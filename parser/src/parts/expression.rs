@@ -22,6 +22,9 @@ pub fn parse_base<'parse>(
         _ => {}
     }
 
+    if tokens.len() == 0 {
+        return Err((ParseError::EndOfFileReached, tokens));
+    }
     return Err((
         ParseError::UnexpectedToken {
             found: &tokens[0],

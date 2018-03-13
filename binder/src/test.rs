@@ -158,3 +158,10 @@ fn bind_module_fn_decl_with_upvar() {
         assert!(res.is_ok());
     });
 }
+
+#[test]
+fn bind_upvar_to_module_fn() {
+    with_bind("let x = 10; let f() = x;", |res| {
+        assert!(res.is_ok());
+    });
+}

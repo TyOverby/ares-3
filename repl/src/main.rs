@@ -6,7 +6,7 @@ extern crate vm;
 use colored::*;
 use vm::value::new_func;
 use vm::value::Function;
-use repl::StorableModuleBinder;
+use repl::{ReplOutKind, StorableModuleBinder};
 
 fn main() {
     linenoise::set_multiline(3);
@@ -22,7 +22,7 @@ fn main() {
 
     let mut vm = vm::vm::Vm::new(function);
     let mut storable_mod_binder = StorableModuleBinder {
-        name: "my-module".into(),
+        name: "repl-module".into(),
         definitions: Default::default(),
     };
 
@@ -38,12 +38,15 @@ fn main() {
             buildup.push_str(&input);
             buildup.push('\n');
             match repl::run(&buildup, &mut vm, storable_mod_binder.clone()) {
-                Ok((s, new_mod)) => {
+                Ok((ReplOutKind::Expression(s), new_mod)) => {
                     storable_mod_binder = new_mod;
                     let s_green = format!("{:?}", s).green();
                     println!("{}", s_green);
                 }
-                Err(s) => println!("{}", s),
+                Ok((ReplOutKind::Statement(_), new_mod)) => {
+                    storable_mod_binder = new_mod;
+                }
+                Err(s) => println!("{}", s.red()),
             }
             buildup.clear();
         }
