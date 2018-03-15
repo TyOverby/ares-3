@@ -83,8 +83,12 @@ pub enum ValueKind {
 impl Debug for Value {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         match *self {
-            Value::Integer(i) => write!(f, "{}i64", i),
-            Value::Float(n) => write!(f, "{}f64", n),
+            Value::Integer(i) => write!(f, "{}", i),
+            Value::Float(n) => if n.abs() == n {
+                write!(f, "{}.0", n)
+            } else {
+                write!(f, "{}", n)
+            },
             Value::Symbol(Symbol(ref s)) => write!(f, "'{}", s),
             Value::Function(ref c) => if f.alternate() {
                 write!(f, "{:#?}", c.borrow())
@@ -94,7 +98,7 @@ impl Debug for Value {
                 write!(f, "function {}", name.unwrap_or("<unnamed>"))
             },
             Value::Continuation(ref c) => if f.alternate() {
-                write!(f, "{:#?}", c)
+                write!(f, "continuation {:#?}", c)
             } else {
                 write!(f, "<continuation>")
             },
