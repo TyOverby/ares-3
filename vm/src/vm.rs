@@ -146,27 +146,81 @@ impl Vm {
     }
 
     fn apply_instr(&mut self, instruction: Instruction) -> VmResult<StepResult> {
+        fn assert_numeric(v: &Value) -> VmResult<()> {
+            if v.kind() != ValueKind::Integer || v.kind() != ValueKind::Float {
+                return Err(VmError::UnexpectedType {
+                    expected: ValueKind::Integer,
+                    found: v.clone(),
+                });
+            }
+            return Ok(());
+        }
+
         use self::Instruction::*;
         match instruction {
             Add => {
-                let r = self.stack.pop()?.into_int()?;
-                let l = self.stack.pop()?.into_int()?;
-                self.stack.push(Value::Integer(l + r))?;
+                let r = self.stack.pop()?;
+                let l = self.stack.pop()?;
+                assert_numeric(&l)?;
+                assert_numeric(&r)?;
+
+                let result = match (l, r) {
+                    (Value::Integer(l), Value::Integer(r)) => Value::Integer(l + r),
+                    (Value::Float(l), Value::Float(r)) => Value::Float(l + r),
+                    (Value::Integer(l), Value::Float(r)) => Value::Float(l as f64 + r),
+                    (Value::Float(l), Value::Integer(r)) => Value::Float(l + r as f64),
+                    _ => unreachable!(),
+                };
+
+                self.stack.push(result)?;
             }
             Sub => {
-                let r = self.stack.pop()?.into_int()?;
-                let l = self.stack.pop()?.into_int()?;
-                self.stack.push(Value::Integer(l - r))?;
+                let r = self.stack.pop()?;
+                let l = self.stack.pop()?;
+                assert_numeric(&l)?;
+                assert_numeric(&r)?;
+
+                let result = match (l, r) {
+                    (Value::Integer(l), Value::Integer(r)) => Value::Integer(l - r),
+                    (Value::Float(l), Value::Float(r)) => Value::Float(l - r),
+                    (Value::Integer(l), Value::Float(r)) => Value::Float(l as f64 - r),
+                    (Value::Float(l), Value::Integer(r)) => Value::Float(l - r as f64),
+                    _ => unreachable!(),
+                };
+
+                self.stack.push(result)?;
             }
             Mul => {
-                let r = self.stack.pop()?.into_int()?;
-                let l = self.stack.pop()?.into_int()?;
-                self.stack.push(Value::Integer(l * r))?;
+                let r = self.stack.pop()?;
+                let l = self.stack.pop()?;
+                assert_numeric(&l)?;
+                assert_numeric(&r)?;
+
+                let result = match (l, r) {
+                    (Value::Integer(l), Value::Integer(r)) => Value::Integer(l * r),
+                    (Value::Float(l), Value::Float(r)) => Value::Float(l * r),
+                    (Value::Integer(l), Value::Float(r)) => Value::Float(l as f64 * r),
+                    (Value::Float(l), Value::Integer(r)) => Value::Float(l * r as f64),
+                    _ => unreachable!(),
+                };
+
+                self.stack.push(result)?;
             }
             Div => {
-                let r = self.stack.pop()?.into_int()?;
-                let l = self.stack.pop()?.into_int()?;
-                self.stack.push(Value::Integer(l / r))?;
+                let r = self.stack.pop()?;
+                let l = self.stack.pop()?;
+                assert_numeric(&l)?;
+                assert_numeric(&r)?;
+
+                let result = match (l, r) {
+                    (Value::Integer(l), Value::Integer(r)) => Value::Integer(l / r),
+                    (Value::Float(l), Value::Float(r)) => Value::Float(l / r),
+                    (Value::Integer(l), Value::Float(r)) => Value::Float(l as f64 / r),
+                    (Value::Float(l), Value::Integer(r)) => Value::Float(l / r as f64),
+                    _ => unreachable!(),
+                };
+
+                self.stack.push(result)?;
             }
 
             BuildFunction => {

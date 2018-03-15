@@ -84,7 +84,7 @@ impl Debug for Value {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         match *self {
             Value::Integer(i) => write!(f, "{}", i),
-            Value::Float(n) => if n.abs() == n {
+            Value::Float(n) => if n.floor() == n {
                 write!(f, "{}.0", n)
             } else {
                 write!(f, "{}", n)
@@ -172,6 +172,18 @@ macro_rules! impl_for_variant {
 impl Value {
     pub fn symbol<S: Into<String>>(s: S) -> Value {
         Value::Symbol(Symbol(s.into()))
+    }
+
+    pub fn kind(&self) -> ValueKind {
+        match self {
+            &Value::Integer(_) => ValueKind::Integer,
+            &Value::Float(_) => ValueKind::Float,
+            &Value::Symbol(_) => ValueKind::Symbol,
+            &Value::Function(_) => ValueKind::Function,
+            &Value::Continuation(_) => ValueKind::Continuation,
+            &Value::Map(_) => ValueKind::Map,
+            &Value::List(_) => ValueKind::List,
+        }
     }
 
     impl_for_variant!(is_int, into_int, as_int, Integer, i64);
