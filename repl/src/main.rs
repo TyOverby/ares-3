@@ -10,17 +10,8 @@ use repl::{ReplOutKind, StorableModuleBinder};
 
 fn main() {
     linenoise::set_multiline(3);
-    let function = new_func(Function {
-        name: None,
-        instructions: vec![],
-        upvars: vec![],
 
-        args_count: 0,
-        upvars_count: 0,
-        locals_count: 0,
-    });
-
-    let mut vm = vm::vm::Vm::new(function);
+    let mut vm = vm::vm::Vm::new();
     let mut storable_mod_binder = StorableModuleBinder {
         name: "repl-module".into(),
         definitions: Default::default(),

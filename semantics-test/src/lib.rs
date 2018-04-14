@@ -34,8 +34,8 @@ fn run(program: &str) -> Vec<Value> {
     println!("{:#?}", emitted);
     let f = emitted.into_function().unwrap();
 
-    let mut vm = vm::vm::Vm::new(f);
-    vm.run().unwrap();
+    let mut vm = vm::vm::Vm::new();
+    vm.run_function(f).unwrap();
 
     vm.debug_values
 }

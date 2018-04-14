@@ -2,8 +2,9 @@ mod map;
 mod function;
 mod continuation;
 mod list;
+mod symbol;
 
-use vm::{Symbol, VmError, VmResult};
+use vm::{VmError, VmResult};
 
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 use std::hash::{Hash, Hasher};
@@ -13,6 +14,7 @@ pub use self::function::{new_func, Function, FunctionPtr};
 pub use self::continuation::{Continuation, ContinuationPtr};
 pub use self::map::AresMap;
 pub use self::list::AresList;
+pub use self::symbol::Symbol;
 
 #[derive(Clone, PartialOrd, Serialize, Deserialize)]
 pub enum Value {

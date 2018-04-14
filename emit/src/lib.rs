@@ -10,7 +10,8 @@ mod function_info;
 
 use binder::{BindingKind, Bound, DeclarationKind};
 use vm::value::{new_func, Function, Value};
-use vm::vm::{Instruction, Symbol};
+use vm::vm::Instruction;
+use vm::value::Symbol;
 use function_info::*;
 
 pub fn emit_top(node: &Bound) -> Value {
@@ -24,7 +25,8 @@ pub fn emit_top(node: &Bound) -> Value {
             }
 
             instructions.push(Instruction::MapEmpty);
-            instructions.push(Instruction::Ret);
+            panic!();
+            //instructions.push(Instruction::Ret);
 
             Value::Function(new_func(Function {
                 instructions,
@@ -168,7 +170,8 @@ pub fn emit(
 
             let mut instrs = vec![];
             assert!(emit(body, &mut instrs, Some(fn_info)));
-            instrs.push(Instruction::Ret);
+            panic!();
+            //instrs.push(Instruction::Ret);
 
             let function_value = Value::Function(new_func(Function {
                 instructions: instrs,

@@ -130,7 +130,7 @@ pub fn run(
 
             let mut instrs = vec![];
             emit::emit(&bound, &mut instrs, None);
-            instrs.push(Instruction::Ret);
+            panic!(); //instrs.push(Instruction::Ret);
             let function = new_func(Function {
                 name: None,
                 instructions: instrs,

@@ -33,6 +33,12 @@ fn emit_module_with_expression_statement() {
 }
 
 #[test]
+fn emit_module_with_expression_statement_float() {
+    let instrs = emit_module("1.234;");
+    assert_eq!(&instrs, &[Push(Value::Float(1.234)), Pop, MapEmpty, Ret]);
+}
+
+#[test]
 fn emit_module_with_variable_declaration() {
     let instrs = emit_module("let x = 5;");
     assert_eq!(

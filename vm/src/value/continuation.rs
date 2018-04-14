@@ -1,4 +1,3 @@
-use vm::ValueStack;
 use std::rc::Rc;
 use std::ops::Deref;
 
@@ -8,21 +7,17 @@ pub struct ContinuationPtr {
 }
 
 #[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub struct Continuation {
-    pub(crate) stack: ValueStack,
-}
+pub struct Continuation {}
 
 impl ContinuationPtr {
-    pub fn new(c: Continuation) -> ContinuationPtr {
-        ContinuationPtr {
-            continuation: Rc::new(c),
-        }
+    pub fn new(_c: Continuation) -> ContinuationPtr {
+        unimplemented!()
     }
 }
 
-impl Deref for ContinuationPtr{
+impl Deref for ContinuationPtr {
     type Target = Continuation;
     fn deref(&self) -> &Self::Target {
-        &self.continuation
+        unimplemented!()
     }
 }
