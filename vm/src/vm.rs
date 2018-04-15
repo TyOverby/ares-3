@@ -328,9 +328,7 @@ impl Vm {
                 let function = stack.pop()?.into_function()?;
                 let mut after_shift = stack.pop()?.into_continuation()?;
 
-                println!("before split: {:#?}", continuation);
                 let (upper, lower) = split_cont_chain(tag.clone(), continuation.take());
-                println!("after split: {:#?}, {:#?}", upper, lower);
                 *continuation = upper;
 
                 if lower.is_none() {

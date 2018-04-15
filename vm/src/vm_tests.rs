@@ -344,7 +344,7 @@ fn reset_and_shift_with_called_cont() {
     let shifter = new_func(Function {
         name: Some("shifter".into()),
         upvars: vec![],
-        instructions: vec![Push(Integer(10)), Resume],
+        instructions: vec![InstallContinuation, Push(Integer(10)), Resume],
         args_count: 1,
         upvars_count: 0,
         locals_count: 0,
@@ -354,14 +354,15 @@ fn reset_and_shift_with_called_cont() {
         name: Some("after_shift".into()),
         upvars: vec![],
         instructions: vec![
-            Push(Integer(100)),
             Debug,
             Push(Integer(100)),
+            Debug,
+            Push(Integer(200)),
             Debug,
             Push(Integer(999)),
             Resume,
         ],
-        args_count: 0,
+        args_count: 1,
         upvars_count: 0,
         locals_count: 0,
     });
@@ -410,8 +411,8 @@ fn reset_and_shift_with_called_cont() {
     let mut vm = Vm::new();
     let res = vm.run_function(main);
 
-    assert_eq!(res, Ok(Integer(10)));
-    assert_eq!(vm.debug_values, vec![]);
+    assert_eq!(res, Ok(Integer(999)));
+    assert_eq!(vm.debug_values, vec![Integer(10), Integer(100), Integer(200)]);
 }
 
 #[test]
