@@ -1,6 +1,6 @@
 use super::vm::{VmError, VmResult};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct ResultVec<T> {
     pub inner: Vec<T>,
 }
@@ -8,6 +8,10 @@ pub struct ResultVec<T> {
 impl<T> ResultVec<T> {
     pub fn new() -> ResultVec<T> {
         ResultVec { inner: vec![] }
+    }
+
+    pub fn new_with(v: Vec<T>) -> ResultVec<T> {
+        ResultVec { inner: v}
     }
 
     pub fn get(&self, idx: u32) -> VmResult<&T> {
@@ -42,7 +46,6 @@ impl<T> ResultVec<T> {
 
     #[allow(unused)]
     pub fn pop_n(&mut self, n: u32) -> VmResult<ResultVec<T>> {
-        panic!("make sure this works correctly!");
         if self.inner.len() as u32 >= n {
             let il = self.inner.len();
             Ok(ResultVec {
@@ -52,4 +55,30 @@ impl<T> ResultVec<T> {
             Err(VmError::StackUnderflow)
         }
     }
+}
+
+
+#[test]
+fn pop_n_test() {
+    let mut v = ResultVec::new();
+    v.push(1).unwrap();
+    v.push(2).unwrap();
+    v.push(3).unwrap();
+    v.push(4).unwrap();
+
+    let r = v.pop_n(1).unwrap();
+
+    assert_eq!(r.inner, vec![4]);
+    assert_eq!(v.inner, vec![1, 2, 3]);
+
+    let mut v = ResultVec::new();
+    v.push(1).unwrap();
+    v.push(2).unwrap();
+    v.push(3).unwrap();
+    v.push(4).unwrap();
+
+    let r = v.pop_n(2).unwrap();
+
+    assert_eq!(r.inner, vec![3, 4]);
+    assert_eq!(v.inner, vec![1, 2]);
 }

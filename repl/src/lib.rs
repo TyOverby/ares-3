@@ -10,7 +10,7 @@ use typed_arena::Arena;
 use vm::value::Value;
 use binder::{bind, BindingState, Bound, DeclarationKind, ModuleBinder};
 use std::collections::HashSet;
-use vm::vm::{Instruction, Vm};
+use vm::vm::Vm;
 use vm::value::{new_func, Function};
 use lexer::{lex, remove_whitespace, Token};
 use parser::{parse_expression, parse_statement};

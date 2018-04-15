@@ -11,7 +11,7 @@ use std::hash::{Hash, Hasher};
 use std::cmp::Ordering;
 
 pub use self::function::{new_func, Function, FunctionPtr};
-pub use self::continuation::{Continuation, ContinuationPtr};
+pub use self::continuation::ContinuationPtr;
 pub use self::map::AresMap;
 pub use self::list::AresList;
 pub use self::symbol::Symbol;

@@ -1,7 +1,7 @@
-use value::{new_func, AresMap, Continuation, ContinuationPtr, FunctionPtr, Symbol, Value,
-            ValueKind};
+use value::{new_func, AresMap, ContinuationPtr, Function, FunctionPtr, Symbol, Value, ValueKind};
 use std::collections::HashMap;
-use std::fmt::{Debug, Formatter, Result as FmtResult};
+use std::ops::Deref;
+use std::rc::Rc;
 use super::resultvec::ResultVec;
 
 pub type VmResult<T> = Result<T, VmError>;
@@ -18,6 +18,7 @@ pub enum VmError {
     UnexpectedType { expected: ValueKind, found: Value },
     RanOutOfInstructions,
     NoModuleDefinition { module: Symbol, definition: Symbol },
+    ContinueWithoutContinuation,
 }
 
 #[derive(Clone, PartialEq, Debug, PartialOrd, Serialize, Deserialize)]
@@ -37,12 +38,15 @@ pub enum Instruction {
     Debug,
 
     BuildFunction,
+    BuildContinuation,
     Call(u32),
-    TailCall(u32),
+    Terminate,
+
+    InstallContinuation,
+    CurrentContinuation,
     Reset,
     Shift,
     Resume,
-    Terminate,
 
     ModuleAdd,
     ModuleGet,
@@ -79,13 +83,26 @@ impl Vm {
     }
 
     pub fn run_function(&mut self, fp: FunctionPtr) -> VmResult<Value> {
+        let terminate_function = new_func(Function {
+            name: Some("<terminate>".into()),
+            upvars: vec![],
+            instructions: vec![Instruction::Terminate],
+            args_count: 1,
+            upvars_count: 0,
+            locals_count: 0,
+        });
+        let final_continuation = ContinuationPtr::new(terminate_function, None, None);
+
         let mut exec_data = FuncExecData {
             function: fp,
             ip: 0,
         };
+
         let mut function_stack = ResultVec::new();
+        let mut continuation = Some(Rc::new(final_continuation));
+
         loop {
-            match self.step(&mut exec_data, &mut function_stack)? {
+            match self.step(&mut exec_data, &mut function_stack, &mut continuation)? {
                 StepResult::Done(v) => return Ok(v),
                 StepResult::Continue => continue,
             }
@@ -95,8 +112,10 @@ impl Vm {
     fn step(
         &mut self,
         func_exec: &mut FuncExecData,
-        function_stack: &mut ResultVec<Value>,
+        stack: &mut ResultVec<Value>,
+        continuation: &mut Option<Rc<ContinuationPtr>>,
     ) -> VmResult<StepResult> {
+        use self::Instruction::*;
         let instruction = {
             let &FuncExecData {
                 ref function,
@@ -107,28 +126,21 @@ impl Vm {
             }
             function.borrow().instructions[*ip].clone()
         };
-
         func_exec.ip += 1;
 
-        self.apply_instr(instruction, function_stack)
-    }
+        println!(
+            "{}: {:?}",
+            func_exec
+                .function
+                .function
+                .borrow()
+                .name
+                .as_ref()
+                .map(AsRef::as_ref)
+                .unwrap_or("<unnamed>"),
+            instruction
+        );
 
-    fn apply_instr(
-        &mut self,
-        instruction: Instruction,
-        stack: &mut ResultVec<Value>,
-    ) -> VmResult<StepResult> {
-        fn assert_numeric(v: &Value) -> VmResult<()> {
-            if v.kind() != ValueKind::Integer && v.kind() != ValueKind::Float {
-                return Err(VmError::UnexpectedType {
-                    expected: ValueKind::Integer,
-                    found: v.clone(),
-                });
-            }
-            return Ok(());
-        }
-
-        use self::Instruction::*;
         match instruction {
             Add => {
                 let r = stack.pop()?;
@@ -195,13 +207,20 @@ impl Vm {
                 stack.push(result)?;
             }
 
-            BuildFunction => {
+            s @ BuildFunction | s @ BuildContinuation => {
                 let f = stack.pop()?.into_function()?;
                 let mut function = f.borrow().clone();
                 assert!(function.upvars.len() == 0);
                 let upvars = stack.pop_n(function.upvars_count)?;
                 function.upvars = upvars.inner;
-                stack.push(Value::Function(new_func(function)))?;
+                let func = new_func(function);
+                match s {
+                    BuildFunction => stack.push(Value::Function(func))?,
+                    BuildContinuation => stack.push(Value::Continuation(
+                        ContinuationPtr::new(func, continuation.clone(), None),
+                    ))?,
+                    _ => unreachable!(),
+                }
             }
             GetFromStackPosition(pos) => {
                 let v = stack.get(pos)?.clone();
@@ -270,59 +289,189 @@ impl Vm {
             Debug => {
                 self.debug_values.push(stack.pop()?);
             }
-            TailCall(arg_count) => {
+            Call(arg_count) => {
                 let args = stack.pop_n(arg_count)?;
                 let f = stack.pop()?.into_function()?;
-
-                if f.borrow().args_count != arg_count {
-                    return Err(VmError::ArityMismatch {
-                        expected: f.borrow().args_count,
-                        actual: arg_count,
-                    });
-                }
-
-                let locals_count = f.borrow().locals_count;
-                let upvars = f.borrow().upvars.clone();
-
-                let exec_data = FuncExecData {
-                    function: f.clone(),
-                    ip: 0,
-                };
-
-                //stack.start_segment(None, exec_data);
-
-                //stack.push(Value::Function(f))?;
-
-                for arg in args.inner {
-                    stack.push(arg)?;
-                }
-
-                for upvar in upvars {
-                    stack.push(upvar.clone())?;
-                }
-
-                for _ in 0..locals_count {
-                    stack.push(Value::Integer(9999999999))?;
-                }
-            }
-            Call(_arg_count) => {
-                unimplemented!();
+                let mut c = stack.pop()?.into_continuation()?;
+                c.parent = continuation.take();
+                *continuation = Some(Rc::new(c));
+                setup_new_function(f, args, stack, func_exec)?;
             }
             Terminate => {
                 let result = stack.pop()?;
                 return Ok(StepResult::Done(result));
             }
+            InstallContinuation => {
+                let c = stack.pop()?.into_continuation()?;
+                *continuation = Some(Rc::new(join_cont_chain(continuation.take(), c)));
+            }
+            CurrentContinuation => {
+                if continuation.is_none() {
+                    return Err(VmError::ContinueWithoutContinuation);
+                }
+                stack.push(Value::Continuation(
+                    (continuation.as_ref().unwrap().deref()).clone(),
+                ))?;
+            }
             Reset => {
-                unimplemented!();
+                let tag = stack.pop()?.into_symbol()?;
+                let function = stack.pop()?.into_function()?;
+                let mut after_reset = stack.pop()?.into_continuation()?;
+                *continuation = Some(Rc::new(join_cont_chain(
+                    Some(Rc::new(join_cont_chain(continuation.take(), after_reset))),
+                    ContinuationPtr::new(continue_up(), None, Some(tag)),
+                )));
+                setup_new_function(function, ResultVec::new(), stack, func_exec)?;
             }
             Shift => {
-                unimplemented!();
+                let tag = stack.pop()?.into_symbol()?;
+                let function = stack.pop()?.into_function()?;
+                let mut after_shift = stack.pop()?.into_continuation()?;
+
+                println!("before split: {:#?}", continuation);
+                let (upper, lower) = split_cont_chain(tag.clone(), continuation.take());
+                println!("after split: {:#?}, {:#?}", upper, lower);
+                *continuation = upper;
+
+                if lower.is_none() {
+                    return Err(VmError::TagNotFound(tag));
+                }
+
+                after_shift.parent = lower;
+                setup_new_function(
+                    function,
+                    ResultVec::new_with(vec![Value::Continuation(after_shift)]),
+                    stack,
+                    func_exec,
+                )?;
             }
             Resume => {
-                unimplemented!();
+                if continuation.is_none() {
+                    return Err(VmError::ContinueWithoutContinuation);
+                }
+
+                let cc: ContinuationPtr = (*continuation.take().unwrap()).clone();
+                let ContinuationPtr {
+                    function, parent, ..
+                } = cc;
+                *continuation = parent;
+                assert!(function.function.borrow().args_count == 1);
+
+                let continue_with_value = stack.pop()?;
+                setup_new_function(
+                    function,
+                    ResultVec::new_with(vec![continue_with_value]),
+                    stack,
+                    func_exec,
+                )?;
             }
         }
 
         Ok(StepResult::Continue)
     }
+}
+
+fn rc_get<T: Clone>(rc: Rc<T>) -> T {
+    match Rc::try_unwrap(rc) {
+        Ok(t) => t,
+        Err(rc) => rc.deref().clone(),
+    }
+}
+
+fn join_cont_chain(
+    left: Option<Rc<ContinuationPtr>>,
+    mut right: ContinuationPtr,
+) -> ContinuationPtr {
+    match right.parent.map(rc_get) {
+        None => {
+            right.parent = left;
+            return right;
+        }
+        Some(p) => {
+            right.parent = Some(Rc::new(join_cont_chain(left, p)));
+            return right;
+        }
+    }
+}
+
+
+fn split_cont_chain(
+    tag: Symbol,
+    current: Option<Rc<ContinuationPtr>>,
+) -> (Option<Rc<ContinuationPtr>>, Option<Rc<ContinuationPtr>>) {
+    if current.is_none() {
+        return (None, None);
+    }
+    let mut current = rc_get(current.unwrap());
+
+    if current.tag.as_ref() == Some(&tag) {
+        let cp = current.parent.take();
+        current.parent = None;
+        (cp, Some(Rc::new(current)))
+    } else {
+        let (high, low) = split_cont_chain(tag, current.parent.clone());
+        current.parent = low;
+        (high, Some(Rc::new(current)))
+    }
+}
+
+fn setup_new_function(
+    f: FunctionPtr,
+    args: ResultVec<Value>,
+    stack: &mut ResultVec<Value>,
+    func_exec: &mut FuncExecData,
+) -> VmResult<()> {
+    if f.borrow().args_count != args.inner.len() as u32 {
+        return Err(VmError::ArityMismatch {
+            expected: f.borrow().args_count,
+            actual: args.inner.len() as u32,
+        });
+    }
+
+    let locals_count = f.borrow().locals_count;
+    let upvars = f.borrow().upvars.clone();
+
+    let exec_data = FuncExecData {
+        function: f.clone(),
+        ip: 0,
+    };
+
+    *stack = ResultVec::new();
+    stack.push(Value::Function(f))?;
+    *func_exec = exec_data;
+
+    for arg in args.inner {
+        stack.push(arg)?;
+    }
+
+    for upvar in upvars {
+        stack.push(upvar.clone())?;
+    }
+
+    for _ in 0..locals_count {
+        stack.push(Value::Integer(9999999999))?;
+    }
+    Ok(())
+}
+
+
+fn assert_numeric(v: &Value) -> VmResult<()> {
+    if v.kind() != ValueKind::Integer && v.kind() != ValueKind::Float {
+        return Err(VmError::UnexpectedType {
+            expected: ValueKind::Integer,
+            found: v.clone(),
+        });
+    }
+    return Ok(());
+}
+
+fn continue_up() -> FunctionPtr {
+    new_func(Function {
+        name: Some("<continue-shim>".into()),
+        upvars: vec![],
+        instructions: vec![Instruction::Resume],
+        args_count: 1,
+        upvars_count: 0,
+        locals_count: 0,
+    })
 }

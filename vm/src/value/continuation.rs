@@ -1,23 +1,24 @@
 use std::rc::Rc;
-use std::ops::Deref;
+use super::FunctionPtr;
+use super::Symbol;
 
 #[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct ContinuationPtr {
-    continuation: Rc<Continuation>,
+    pub function: FunctionPtr,
+    pub parent: Option<Rc<ContinuationPtr>>,
+    pub tag: Option<Symbol>,
 }
-
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub struct Continuation {}
 
 impl ContinuationPtr {
-    pub fn new(_c: Continuation) -> ContinuationPtr {
-        unimplemented!()
-    }
-}
-
-impl Deref for ContinuationPtr {
-    type Target = Continuation;
-    fn deref(&self) -> &Self::Target {
-        unimplemented!()
+    pub fn new(
+        function: FunctionPtr,
+        parent: Option<Rc<ContinuationPtr>>,
+        symbol: Option<Symbol>,
+    ) -> ContinuationPtr {
+        ContinuationPtr {
+            function,
+            parent,
+            tag: symbol,
+        }
     }
 }
