@@ -1,4 +1,4 @@
-use value::{new_func, AresMap, ContinuationPtr, Function, FunctionPtr, Symbol, Value, ValueKind};
+use value::{new_func, AresMap, BuiltFunction, Function, FunctionPtr, Symbol, Value, ValueKind};
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::rc::Rc;
@@ -19,6 +19,7 @@ pub enum VmError {
     RanOutOfInstructions,
     NoModuleDefinition { module: Symbol, definition: Symbol },
     ContinueWithoutContinuation,
+    CallOnUnbuiltFunction,
 }
 
 #[derive(Clone, PartialEq, Debug, PartialOrd, Serialize, Deserialize)]
@@ -31,6 +32,7 @@ pub enum Instruction {
     Push(Value),
     GetFromStackPosition(u32),
     SetToStackPosition(u32),
+    Swap,
     Pop,
     Dup,
 
@@ -38,11 +40,9 @@ pub enum Instruction {
     Debug,
 
     BuildFunction,
-    BuildContinuation,
     Call(u32),
     Terminate,
 
-    InstallContinuation,
     CurrentContinuation,
     Reset,
     Shift,
@@ -85,13 +85,28 @@ impl Vm {
     pub fn run_function(&mut self, fp: FunctionPtr) -> VmResult<Value> {
         let terminate_function = new_func(Function {
             name: Some("<terminate>".into()),
-            upvars: vec![],
+            built: BuiltFunction {
+                upvars: vec![],
+                continuation: None,
+            },
+            is_built: true,
             instructions: vec![Instruction::Terminate],
             args_count: 1,
             upvars_count: 0,
             locals_count: 0,
         });
-        let final_continuation = ContinuationPtr::new(terminate_function, None, None);
+
+        let mut fp = rc_get(fp.function).clone();
+        assert_eq!(fp.args_count, 0);
+        assert_eq!(fp.upvars_count, 0);
+
+        fp.built = BuiltFunction {
+            upvars: vec![],
+            continuation: Some((terminate_function, None)),
+        };
+        fp.is_built = true;
+
+        let fp = new_func(fp);
 
         let mut exec_data = FuncExecData {
             function: fp,
@@ -99,10 +114,9 @@ impl Vm {
         };
 
         let mut function_stack = ResultVec::new();
-        let mut continuation = Some(Rc::new(final_continuation));
 
         loop {
-            match self.step(&mut exec_data, &mut function_stack, &mut continuation)? {
+            match self.step(&mut exec_data, &mut function_stack)? {
                 StepResult::Done(v) => return Ok(v),
                 StepResult::Continue => continue,
             }
@@ -113,7 +127,6 @@ impl Vm {
         &mut self,
         func_exec: &mut FuncExecData,
         stack: &mut ResultVec<Value>,
-        continuation: &mut Option<Rc<ContinuationPtr>>,
     ) -> VmResult<StepResult> {
         use self::Instruction::*;
         let instruction = {
@@ -121,10 +134,10 @@ impl Vm {
                 ref function,
                 ref ip,
             } = func_exec as &_;
-            if *ip >= function.borrow().instructions.len() {
+            if *ip >= function.instructions.len() {
                 return Err(VmError::RanOutOfInstructions);
             }
-            function.borrow().instructions[*ip].clone()
+            function.instructions[*ip].clone()
         };
         func_exec.ip += 1;
 
@@ -133,7 +146,6 @@ impl Vm {
             func_exec
                 .function
                 .function
-                .borrow()
                 .name
                 .as_ref()
                 .map(AsRef::as_ref)
@@ -207,20 +219,18 @@ impl Vm {
                 stack.push(result)?;
             }
 
-            s @ BuildFunction | s @ BuildContinuation => {
-                let f = stack.pop()?.into_function()?;
-                let mut function = f.borrow().clone();
-                assert!(function.upvars.len() == 0);
+            BuildFunction => {
+                let function = stack.pop()?.into_function()?;
+                let mut function = rc_get(function.function);
+                assert!(!function.is_built);
                 let upvars = stack.pop_n(function.upvars_count)?;
-                function.upvars = upvars.inner;
-                let func = new_func(function);
-                match s {
-                    BuildFunction => stack.push(Value::Function(func))?,
-                    BuildContinuation => stack.push(Value::Continuation(
-                        ContinuationPtr::new(func, continuation.clone(), None),
-                    ))?,
-                    _ => unreachable!(),
-                }
+                function.built = BuiltFunction {
+                    upvars: upvars.inner,
+                    continuation: None,
+                };
+                function.is_built = true;
+                let function = new_func(function);
+                stack.push(Value::Function(function))?;
             }
             GetFromStackPosition(pos) => {
                 let v = stack.get(pos)?.clone();
@@ -235,6 +245,12 @@ impl Vm {
             }
             Pop => {
                 stack.pop()?;
+            }
+            Swap => {
+                let a = stack.pop()?;
+                let b = stack.pop()?;
+                stack.push(a)?;
+                stack.push(b)?;
             }
 
             ModuleAdd => {
@@ -289,71 +305,81 @@ impl Vm {
             Debug => {
                 self.debug_values.push(stack.pop()?);
             }
-            Call(arg_count) => {
-                let args = stack.pop_n(arg_count)?;
-                let f = stack.pop()?.into_function()?;
-                let mut c = stack.pop()?.into_continuation()?;
-                c.parent = continuation.take();
-                *continuation = Some(Rc::new(c));
-                setup_new_function(f, args, stack, func_exec)?;
-            }
             Terminate => {
                 let result = stack.pop()?;
                 return Ok(StepResult::Done(result));
             }
-            InstallContinuation => {
-                let c = stack.pop()?.into_continuation()?;
-                *continuation = Some(Rc::new(join_cont_chain(continuation.take(), c)));
-            }
             CurrentContinuation => {
-                if continuation.is_none() {
-                    return Err(VmError::ContinueWithoutContinuation);
-                }
-                stack.push(Value::Continuation(
-                    (continuation.as_ref().unwrap().deref()).clone(),
-                ))?;
+                let cc = func_exec.function.continuation();
+                assert!(cc.is_some());
+                stack.push(Value::Function(cc.unwrap().0))?;
+            }
+            Call(arg_count) => {
+                let args = stack.pop_n(arg_count)?;
+                let function = stack.pop()?.into_function()?;
+                let continuation = stack.pop()?.into_function()?;
+                assert!(function.is_built);
+                assert!(continuation.is_built);
+
+                let (function, _) = join_cont_chain(
+                    func_exec.function.continuation(),
+                    join_cont_chain(Some((continuation, None)), (function, None)),
+                );
+                assert!(function.continuation().is_some());
+
+                setup_new_function(function, args, stack, func_exec)?;
             }
             Reset => {
                 let tag = stack.pop()?.into_symbol()?;
                 let function = stack.pop()?.into_function()?;
-                let mut after_reset = stack.pop()?.into_continuation()?;
-                *continuation = Some(Rc::new(join_cont_chain(
-                    Some(Rc::new(join_cont_chain(continuation.take(), after_reset))),
-                    ContinuationPtr::new(continue_up(), None, Some(tag)),
-                )));
-                setup_new_function(function, ResultVec::new(), stack, func_exec)?;
+                let after_reset = stack.pop()?.into_function()?;
+                assert!(function.is_built);
+                assert!(function.args_count == 0);
+                assert!(after_reset.is_built);
+
+                // current continuation <- after_reset <- continue_up('s) <- function
+                let function = join_cont_chain(
+                    Some(join_cont_chain(
+                        func_exec.function.continuation(),
+                        (continue_up((after_reset, Some(tag))), None),
+                    )),
+                    (function, None),
+                );
+
+                setup_new_function(function.0, ResultVec::new(), stack, func_exec)?;
             }
             Shift => {
                 let tag = stack.pop()?.into_symbol()?;
                 let function = stack.pop()?.into_function()?;
-                let mut after_shift = stack.pop()?.into_continuation()?;
+                let after_shift = stack.pop()?.into_function()?;
 
-                let (upper, lower) = split_cont_chain(tag.clone(), continuation.take());
-                *continuation = upper;
+                assert!(function.args_count == 1);
 
-                if lower.is_none() {
-                    return Err(VmError::TagNotFound(tag));
-                }
+                let cc = func_exec.function.continuation();
+                let (high, low) = split_cont_chain(tag.clone(), cc);
+                let (high, low) = match (high, low) {
+                    (None, _) => return Err(VmError::TagNotFound(tag)),
+                    (_, None) => panic!(),
+                    (Some(h), Some(l)) => (h, l),
+                };
 
-                after_shift.parent = lower;
+                let function = function.with_continuation(high);
+                let continuation_parameter = join_cont_chain(Some(low), (after_shift, None));
+
                 setup_new_function(
                     function,
-                    ResultVec::new_with(vec![Value::Continuation(after_shift)]),
+                    ResultVec::new_with(vec![Value::Function(continuation_parameter.0)]),
                     stack,
                     func_exec,
                 )?;
             }
             Resume => {
-                if continuation.is_none() {
-                    return Err(VmError::ContinueWithoutContinuation);
-                }
+                let function = match func_exec.function.continuation() {
+                    Some(f) => f.0,
+                    None => return Err(VmError::ContinueWithoutContinuation),
+                };
 
-                let cc: ContinuationPtr = (*continuation.take().unwrap()).clone();
-                let ContinuationPtr {
-                    function, parent, ..
-                } = cc;
-                *continuation = parent;
-                assert!(function.function.borrow().args_count == 1);
+                assert!(function.function.args_count == 1);
 
                 let continue_with_value = stack.pop()?;
                 setup_new_function(
@@ -376,18 +402,13 @@ fn rc_get<T: Clone>(rc: Rc<T>) -> T {
     }
 }
 
-fn join_cont_chain(
-    left: Option<Rc<ContinuationPtr>>,
-    mut right: ContinuationPtr,
-) -> ContinuationPtr {
-    match right.parent.map(rc_get) {
-        None => {
-            right.parent = left;
-            return right;
-        }
+type ContPair = (FunctionPtr, Option<Symbol>);
+fn join_cont_chain(left: Option<ContPair>, right: ContPair) -> ContPair {
+    match right.0.continuation() {
+        None => (right.0.with_opt_continuation(left), right.1),
         Some(p) => {
-            right.parent = Some(Rc::new(join_cont_chain(left, p)));
-            return right;
+            let px = join_cont_chain(left, p);
+            (right.0.with_opt_continuation(Some(px)), right.1)
         }
     }
 }
@@ -395,21 +416,41 @@ fn join_cont_chain(
 
 fn split_cont_chain(
     tag: Symbol,
-    current: Option<Rc<ContinuationPtr>>,
-) -> (Option<Rc<ContinuationPtr>>, Option<Rc<ContinuationPtr>>) {
+    current: Option<(FunctionPtr, Option<Symbol>)>,
+) -> (
+    Option<(FunctionPtr, Option<Symbol>)>,
+    Option<(FunctionPtr, Option<Symbol>)>,
+) {
     if current.is_none() {
         return (None, None);
     }
-    let mut current = rc_get(current.unwrap());
+    let (current_fn, current_tag) = current.unwrap();
+    let mut current_fn = rc_get(current_fn.function);
 
-    if current.tag.as_ref() == Some(&tag) {
-        let cp = current.parent.take();
-        current.parent = None;
-        (cp, Some(Rc::new(current)))
+    if current_tag.as_ref() == Some(&tag) {
+        let cp = current_fn.built.continuation.take();
+        current_fn.built.continuation = None;
+        (
+            cp,
+            Some((
+                FunctionPtr {
+                    function: Rc::new(current_fn),
+                },
+                current_tag,
+            )),
+        )
     } else {
-        let (high, low) = split_cont_chain(tag, current.parent.clone());
-        current.parent = low;
-        (high, Some(Rc::new(current)))
+        let (high, low) = split_cont_chain(tag, current_fn.built.continuation.take());
+        current_fn.built.continuation = low;
+        (
+            high,
+            Some((
+                FunctionPtr {
+                    function: Rc::new(current_fn),
+                },
+                current_tag,
+            )),
+        )
     }
 }
 
@@ -419,15 +460,17 @@ fn setup_new_function(
     stack: &mut ResultVec<Value>,
     func_exec: &mut FuncExecData,
 ) -> VmResult<()> {
-    if f.borrow().args_count != args.inner.len() as u32 {
+    if f.args_count != args.inner.len() as u32 {
         return Err(VmError::ArityMismatch {
-            expected: f.borrow().args_count,
+            expected: f.args_count,
             actual: args.inner.len() as u32,
         });
     }
 
-    let locals_count = f.borrow().locals_count;
-    let upvars = f.borrow().upvars.clone();
+    assert!(f.function.is_built);
+
+    let locals_count = f.locals_count;
+    let upvars = f.built.upvars.clone();
 
     let exec_data = FuncExecData {
         function: f.clone(),
@@ -463,10 +506,15 @@ fn assert_numeric(v: &Value) -> VmResult<()> {
     return Ok(());
 }
 
-fn continue_up() -> FunctionPtr {
+fn continue_up(cp: ContPair) -> FunctionPtr {
     new_func(Function {
         name: Some("<continue-shim>".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: Some(cp),
+        },
+        is_built: true,
+        //upvars: vec![],
         instructions: vec![Instruction::Resume],
         args_count: 1,
         upvars_count: 0,

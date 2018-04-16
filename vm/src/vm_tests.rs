@@ -2,6 +2,7 @@ use vm::*;
 use self::Instruction::*;
 use value::Value::*;
 use value::{new_func, AresMap, Function, Symbol, Value};
+use value::BuiltFunction;
 
 fn symval(v: &str) -> Value {
     Value::Symbol(Symbol(v.into()))
@@ -11,7 +12,11 @@ fn symval(v: &str) -> Value {
 fn basic_return_value() {
     let function = new_func(Function {
         name: Some("adder".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![Push(Integer(1)), Terminate],
         args_count: 0,
         upvars_count: 0,
@@ -26,7 +31,11 @@ fn basic_return_value() {
 fn basic_return_value_float() {
     let function = new_func(Function {
         name: Some("adder".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![Push(Float(1.234)), Terminate],
         args_count: 0,
         upvars_count: 0,
@@ -42,7 +51,11 @@ fn basic_return_value_float() {
 fn empty_map() {
     let function = new_func(Function {
         name: Some("empty_map".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![MapEmpty, Terminate],
         args_count: 0,
         upvars_count: 0,
@@ -57,7 +70,11 @@ fn empty_map() {
 fn map_with_some_adds() {
     let function = new_func(Function {
         name: Some("empty_map".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![
             Push(Value::Integer(20)),
             Push(Value::Integer(5)),
@@ -79,7 +96,11 @@ fn map_with_some_adds() {
 fn map_get() {
     let function = new_func(Function {
         name: Some("empty_map".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![
             Push(Value::Integer(20)),
             Push(Value::Integer(5)),
@@ -102,7 +123,11 @@ fn map_get() {
 fn bad_map_get() {
     let function = new_func(Function {
         name: Some("empty_map".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![MapEmpty, Push(Value::Integer(20)), MapGet, Terminate],
         args_count: 0,
         upvars_count: 0,
@@ -121,7 +146,11 @@ fn bad_map_get() {
 fn test_addition() {
     let function = new_func(Function {
         name: Some("adder".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![Push(Integer(5)), Push(Integer(10)), Add, Terminate],
         args_count: 0,
         upvars_count: 0,
@@ -135,7 +164,11 @@ fn test_addition() {
 fn test_tail_call() {
     let last = new_func(Function {
         name: Some("last".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![Push(Value::Integer(10)), Resume],
         args_count: 0,
         upvars_count: 0,
@@ -144,7 +177,11 @@ fn test_tail_call() {
 
     let g = new_func(Function {
         name: Some("g".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![
             CurrentContinuation,
             Push(Value::Function(last)),
@@ -158,7 +195,11 @@ fn test_tail_call() {
 
     let f = new_func(Function {
         name: Some("f".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![
             CurrentContinuation,
             Push(Value::Function(g)),
@@ -172,7 +213,11 @@ fn test_tail_call() {
 
     let main = new_func(Function {
         name: Some("main".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![
             CurrentContinuation,
             Push(Function(f)),
@@ -192,7 +237,11 @@ fn test_tail_call() {
 fn fake_test_tail_call() {
     let last = new_func(Function {
         name: Some("last".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![Push(Value::Integer(10)), Terminate],
         args_count: 0,
         upvars_count: 0,
@@ -201,7 +250,11 @@ fn fake_test_tail_call() {
 
     let g = new_func(Function {
         name: Some("g".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![
             CurrentContinuation,
             Push(Value::Function(last)),
@@ -215,7 +268,11 @@ fn fake_test_tail_call() {
 
     let f = new_func(Function {
         name: Some("f".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![
             CurrentContinuation,
             Push(Value::Function(g)),
@@ -229,7 +286,11 @@ fn fake_test_tail_call() {
 
     let main = new_func(Function {
         name: Some("main".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![
             CurrentContinuation,
             Push(Function(f)),
@@ -249,7 +310,11 @@ fn fake_test_tail_call() {
 fn test_function_call() {
     let get_x = new_func(Function {
         name: Some("getX".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![Push(Integer(11)), Resume],
         args_count: 0,
         upvars_count: 0,
@@ -258,7 +323,11 @@ fn test_function_call() {
 
     let printer = new_func(Function {
         name: Some("printer".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![Debug, Push(Integer(9)), Resume],
         args_count: 1,
         upvars_count: 0,
@@ -267,7 +336,11 @@ fn test_function_call() {
 
     let after_get_x = new_func(Function {
         name: Some("after_get_x".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![Push(Value::Integer(1)), Add, Resume],
         args_count: 1,
         upvars_count: 0,
@@ -276,11 +349,16 @@ fn test_function_call() {
 
     let inside_print = new_func(Function {
         name: Some("inside_print".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![
             Push(Value::Function(after_get_x)),
-            BuildContinuation,
+            BuildFunction,
             Push(Value::Function(get_x)),
+            BuildFunction,
             Call(0),
         ],
         args_count: 0,
@@ -290,11 +368,16 @@ fn test_function_call() {
 
     let main = new_func(Function {
         name: Some("main".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![
             Push(Function(printer)),
-            BuildContinuation,
+            BuildFunction,
             Push(Function(inside_print)),
+            BuildFunction,
             Call(0),
         ],
         args_count: 0,
@@ -312,7 +395,11 @@ fn test_function_call() {
 fn reset_without_a_shift() {
     let inside_reset = new_func(Function {
         name: Some("inside reset".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![Push(Integer(1)), Terminate],
         args_count: 0,
         upvars_count: 0,
@@ -321,10 +408,15 @@ fn reset_without_a_shift() {
 
     let main = new_func(Function {
         name: Some("main".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![
             CurrentContinuation,
             Push(Function(inside_reset)),
+            BuildFunction,
             Push(symval("hi")),
             Reset,
             Terminate,
@@ -343,8 +435,20 @@ fn reset_without_a_shift() {
 fn reset_and_shift_with_called_cont() {
     let shifter = new_func(Function {
         name: Some("shifter".into()),
-        upvars: vec![],
-        instructions: vec![InstallContinuation, Push(Integer(10)), Resume],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
+        instructions: vec![
+            CurrentContinuation,
+            Push(Integer(10)),
+            Print,
+            GetFromStackPosition(2),
+            GetFromStackPosition(1),
+            GetFromStackPosition(3),
+            Call(1),
+        ],
         args_count: 1,
         upvars_count: 0,
         locals_count: 0,
@@ -352,7 +456,11 @@ fn reset_and_shift_with_called_cont() {
 
     let after_shift = new_func(Function {
         name: Some("after_shift".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![
             Debug,
             Push(Integer(100)),
@@ -370,10 +478,14 @@ fn reset_and_shift_with_called_cont() {
 
     let reseter = new_func(Function {
         name: Some("resetter".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![
             Push(Function(after_shift)),
-            BuildContinuation,
+            BuildFunction,
             Push(Function(shifter)),
             BuildFunction,
             Push(symval("io")),
@@ -386,7 +498,11 @@ fn reset_and_shift_with_called_cont() {
 
     let after_reset = new_func(Function {
         name: Some("after_reset".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![Resume],
         args_count: 1,
         upvars_count: 0,
@@ -395,10 +511,14 @@ fn reset_and_shift_with_called_cont() {
 
     let main = new_func(Function {
         name: Some("main".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![
             Push(Function(after_reset)),
-            BuildContinuation,
+            BuildFunction,
             Push(Function(reseter)),
             BuildFunction,
             Push(symval("io")),
@@ -412,14 +532,21 @@ fn reset_and_shift_with_called_cont() {
     let res = vm.run_function(main);
 
     assert_eq!(res, Ok(Integer(999)));
-    assert_eq!(vm.debug_values, vec![Integer(10), Integer(100), Integer(200)]);
+    assert_eq!(
+        vm.debug_values,
+        vec![Integer(10), Integer(100), Integer(200)]
+    );
 }
 
 #[test]
 fn reset_and_shift_with_ignored_cont() {
     let shifter = new_func(Function {
         name: Some("shifter".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![Push(Integer(10)), Resume],
         args_count: 1,
         upvars_count: 0,
@@ -428,7 +555,11 @@ fn reset_and_shift_with_ignored_cont() {
 
     let after_shift = new_func(Function {
         name: Some("after_shift".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![
             Push(Integer(100)),
             Debug,
@@ -445,10 +576,14 @@ fn reset_and_shift_with_ignored_cont() {
 
     let reseter = new_func(Function {
         name: Some("resetter".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![
             Push(Function(after_shift)),
-            BuildContinuation,
+            BuildFunction,
             Push(Function(shifter)),
             BuildFunction,
             Push(symval("io")),
@@ -461,7 +596,11 @@ fn reset_and_shift_with_ignored_cont() {
 
     let after_reset = new_func(Function {
         name: Some("after_reset".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![Resume],
         args_count: 1,
         upvars_count: 0,
@@ -470,10 +609,14 @@ fn reset_and_shift_with_ignored_cont() {
 
     let main = new_func(Function {
         name: Some("main".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![
             Push(Function(after_reset)),
-            BuildContinuation,
+            BuildFunction,
             Push(Function(reseter)),
             BuildFunction,
             Push(symval("io")),
@@ -494,7 +637,11 @@ fn reset_and_shift_with_ignored_cont() {
 fn setting_module_variables() {
     let main = new_func(Function {
         name: Some("main2".into()),
-        upvars: vec![],
+        built: BuiltFunction {
+            upvars: vec![],
+            continuation: None,
+        },
+        is_built: false,
         instructions: vec![
             Push(Integer(5)),
             Push(symval("variable_name")),

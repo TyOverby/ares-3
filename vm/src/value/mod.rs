@@ -1,6 +1,5 @@
 mod map;
 mod function;
-mod continuation;
 mod list;
 mod symbol;
 
@@ -10,8 +9,7 @@ use std::fmt::{Debug, Formatter, Result as FmtResult};
 use std::hash::{Hash, Hasher};
 use std::cmp::Ordering;
 
-pub use self::function::{new_func, Function, FunctionPtr};
-pub use self::continuation::ContinuationPtr;
+pub use self::function::{new_func, Function, BuiltFunction, FunctionPtr};
 pub use self::map::AresMap;
 pub use self::list::AresList;
 pub use self::symbol::Symbol;
@@ -22,7 +20,6 @@ pub enum Value {
     Float(f64),
     Symbol(Symbol),
     Function(FunctionPtr),
-    Continuation(ContinuationPtr),
     Map(AresMap),
     List(AresList),
 }
@@ -35,7 +32,6 @@ impl PartialEq for Value {
             (&Float(l), &Float(r)) => l == r,
             (&Symbol(ref l), &Symbol(ref r)) => l == r,
             (&Function(ref l), &Function(ref r)) => l == r,
-            (&Continuation(ref l), &Continuation(ref r)) => l == r,
             (&Map(ref l), &Map(ref r)) => l == r,
             (&List(ref l), &List(ref r)) => l == r,
             _ => false,
@@ -61,7 +57,7 @@ impl Hash for Value {
                 as_i.hash(state);
             }
             Value::Symbol(ref s) => s.hash(state),
-            Value::Function(_) | Value::Continuation(_) | Value::List(_) | Value::Map(_) => {
+            Value::Function(_) | Value::List(_) | Value::Map(_) => {
                 unimplemented!();
             }
         }
@@ -92,17 +88,11 @@ impl Debug for Value {
                 write!(f, "{}", n)
             },
             Value::Symbol(Symbol(ref s)) => write!(f, "'{}", s),
-            Value::Function(ref c) => if f.alternate() {
-                write!(f, "{:#?}", c.borrow())
+            Value::Function(ref func) => if f.alternate() {
+                write!(f, "{:#?}", func)
             } else {
-                let func = c.borrow();
                 let name = func.name.as_ref().map(|s| s.as_ref());
                 write!(f, "function {}", name.unwrap_or("<unnamed>"))
-            },
-            Value::Continuation(ref c) => if f.alternate() {
-                write!(f, "continuation {:#?}", c)
-            } else {
-                write!(f, "<continuation>")
             },
             Value::List(ref o) => {
                 write!(f, "[")?;
@@ -182,7 +172,6 @@ impl Value {
             &Value::Float(_) => ValueKind::Float,
             &Value::Symbol(_) => ValueKind::Symbol,
             &Value::Function(_) => ValueKind::Function,
-            &Value::Continuation(_) => ValueKind::Continuation,
             &Value::Map(_) => ValueKind::Map,
             &Value::List(_) => ValueKind::List,
         }
@@ -197,13 +186,6 @@ impl Value {
         as_function,
         Function,
         FunctionPtr
-    );
-    impl_for_variant!(
-        is_continuation,
-        into_continuation,
-        as_continuation,
-        Continuation,
-        ContinuationPtr
     );
     impl_for_variant!(is_map, into_map, as_map, Map, AresMap);
     impl_for_variant!(is_list, into_list, as_list, List, AresList);
