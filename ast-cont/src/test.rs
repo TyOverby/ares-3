@@ -16,12 +16,8 @@ where
     let mut cache = HashMap::new();
     let parsed = parse_expression(&lexed, &arena, &mut cache).unwrap().0;
     println!("{:#?}", parsed);
-    let parsed_cont = translate(
-        parsed,
-        Box::new(|t| generate_terminal(&new_arena, t)),
-        &id_builder,
-        &new_arena,
-    );
+    let parsed_cont =
+        translate(parsed, Box::new(|t| generate_terminal(&new_arena, t)), &id_builder, &new_arena);
     f(parsed_cont)
 }
 
@@ -34,50 +30,39 @@ fn generate_terminal<'a>(arena: &'a Arena<ContAst<'a>>, terminal: Terminal<'a>) 
     })
 }
 
-use PrimOpKind::*;
-use Ident::*;
-use Terminal::*;
+use difference::Changeset;
 use ContAst::*;
+use Ident::*;
+use PrimOpKind::*;
+use Terminal::*;
 
-#[test]
-fn appel_13() {
-    with_parsed_expression_cont("(a + 1) * (c + 3)", |r| {
-        assert_eq!(
-            r,
-            &Primop {
-                op: Add,
-                terminals: vec![Ident(Identifier("a")), Integer(1)],
-                exports: vec![Phantom(1)],
-                continuations: vec![
-                    &Primop {
-                        op: Add,
-                        terminals: vec![Ident(Identifier("c")), Integer(3)],
-                        exports: vec![Phantom(2)],
-                        continuations: vec![
-                            &Primop {
-                                op: Mul,
-                                terminals: vec![Ident(Phantom(1)), Ident(Phantom(2))],
-                                exports: vec![Phantom(0)],
-                                continuations: vec![
-                                    &Primop {
-                                        op: Term,
-                                        terminals: vec![Ident(Phantom(0))],
-                                        exports: vec![],
-                                        continuations: vec![]
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ]
-            }
-        );
+fn compile_eq(program: &'static str, expected: &str) {
+    fn str_rep_eq(actual: String, expected: &str) {
+        if actual.trim() != expected.trim() {
+            panic!("\n{}", Changeset::new(actual.trim(), expected.trim(), "\n"));
+        }
+    }
+
+    with_parsed_expression_cont(program, |r| {
+        str_rep_eq(format!("{:?}", r), expected);
     });
 }
 
 #[test]
+fn appel_13() {
+    compile_eq( "(a + 1) * (c + 3)",
+        r#"
+Add([a, 1]) -> ([id_1]) =>
+    Add([c, 3]) -> ([id_2]) =>
+        Mul([id_1, id_2]) -> ([id_0]) =>
+            Term([id_0]) -> ([]) =>"#,
+    );
+}
+#[test]
 fn appel_13_mod() {
-    with_parsed_expression_cont("a + b * c", |r| {
-        panic!("{:#?}", r);
-    });
+    compile_eq("a + b * c",
+    r#"
+Mul([b, c]) -> ([id_1]) =>
+    Add([a, id_1]) -> ([id_0]) =>
+        Term([id_0]) -> ([]) =>"#);
 }

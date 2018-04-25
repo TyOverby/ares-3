@@ -3,6 +3,8 @@
 extern crate lexer;
 extern crate parser;
 extern crate typed_arena;
+#[cfg(test)]
+extern crate difference;
 
 #[cfg(test)]
 mod test;
@@ -101,7 +103,7 @@ fn do_binary<'c>(
 }
 
 impl IdGet {
-    fn new() -> IdGet {
+    pub fn new() -> IdGet {
         IdGet {
             id: RefCell::new(0),
         }
@@ -162,7 +164,7 @@ pub fn smart_print<'a>(
             ref continuations,
         } => {
             indent(out, indent_count)?;
-            write!(out, "{:?}({:?}) -> ({:?}) => ", op, terminals, exports)?;
+            write!(out, "{:?}({:?}) -> ({:?}) =>", op, terminals, exports)?;
             out.write_char('\n')?;
             for cont in continuations {
                 smart_print(cont, out, indent_count + 4)?;
