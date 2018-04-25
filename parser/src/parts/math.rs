@@ -1,5 +1,5 @@
-use ::*;
 use lexer::TokenKind;
+use *;
 
 pub fn parse_additive<'parse>(
     tokens: &'parse [Token<'parse>],
@@ -8,7 +8,7 @@ pub fn parse_additive<'parse>(
     lower: Parser,
 ) -> Result<'parse> {
     let (left, tokens) = lower(tokens, arena, cache)?;
-    let rest: Result<'parse> = do catch {
+    let rest: Result<'parse> = (|| {
         let (op, tokens) = expect_token_type!(
             tokens,
             TokenKind::Plus | TokenKind::Minus,
@@ -16,11 +16,11 @@ pub fn parse_additive<'parse>(
         )?;
         let (right, tokens) = me_or_fallback!(parse_additive, lower, (tokens, arena, cache))?;
         if op.kind == TokenKind::Plus {
-            Ok((arena.alloc(Ast::Add(left, right)), tokens))
+            Ok((arena.alloc(Ast::Add(left, right)) as &_, tokens))
         } else {
-            Ok((arena.alloc(Ast::Sub(left, right)), tokens))
+            Ok((arena.alloc(Ast::Sub(left, right)) as &_, tokens))
         }
-    };
+    })();
     rest.or(Ok((left, tokens)))
 }
 
@@ -31,7 +31,7 @@ pub fn parse_multiplicative<'parse>(
     lower: Parser,
 ) -> Result<'parse> {
     let (left, tokens) = lower(tokens, arena, cache)?;
-    let rest: Result<'parse> = do catch {
+    let rest: Result<'parse> = (|| {
         let (op, tokens) = expect_token_type!(
             tokens,
             TokenKind::Mul | TokenKind::Div,
@@ -39,11 +39,11 @@ pub fn parse_multiplicative<'parse>(
         )?;
         let (right, tokens) = me_or_fallback!(parse_multiplicative, lower, (tokens, arena, cache))?;
         if op.kind == TokenKind::Mul {
-            Ok((arena.alloc(Ast::Mul(left, right)), tokens))
+            Ok((arena.alloc(Ast::Mul(left, right)) as &_, tokens))
         } else {
-            Ok((arena.alloc(Ast::Div(left, right)), tokens))
+            Ok((arena.alloc(Ast::Div(left, right)) as &_, tokens))
         }
-    };
+    })();
     rest.or(Ok((left, tokens)))
 }
 

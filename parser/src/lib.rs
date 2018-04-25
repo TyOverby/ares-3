@@ -1,4 +1,3 @@
-#![feature(catch_expr)]
 extern crate lexer;
 extern crate typed_arena;
 

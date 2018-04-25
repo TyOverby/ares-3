@@ -3,7 +3,7 @@ macro_rules! precedence {
         &|t, a, c| $last(t, a, c)
     };
     ($current: ident, $($rest: ident),+) => {{
-         &|t, a, c| $current(t, a, c, (precedence!($($rest),+)))
+         &|t, a, c| $current(t, a, c, precedence!($($rest),+))
     }};
 }
 
