@@ -1,4 +1,5 @@
 use super::{translate, ContAst, ContAstPtr, IdGet, PrimOpKind, Terminal};
+use difference::Changeset;
 use lexer::{lex, remove_whitespace};
 use parser::parse_expression;
 use std::collections::HashMap;
@@ -30,12 +31,6 @@ fn generate_terminal<'a>(arena: &'a Arena<ContAst<'a>>, terminal: Terminal<'a>) 
     })
 }
 
-use difference::Changeset;
-use ContAst::*;
-use Ident::*;
-use PrimOpKind::*;
-use Terminal::*;
-
 fn compile_eq(program: &'static str, expected: &str) {
     fn str_rep_eq(actual: String, expected: &str) {
         if actual.trim() != expected.trim() {
@@ -47,10 +42,81 @@ fn compile_eq(program: &'static str, expected: &str) {
         str_rep_eq(format!("{:?}", r), expected);
     });
 }
+#[test]
+fn simple_identifier() {
+    compile_eq("c", "Term([c]) -> ([]) =>");
+}
+
+#[test]
+fn simple_number() {
+    compile_eq("1", "Term([1]) -> ([]) =>");
+}
+
+#[test]
+fn no_arg_call() {
+    compile_eq(
+        "a()",
+        r#"
+fix fn id_0([id_1]) =>
+    Term([id_1]) -> ([]) =>
+    continue with:
+        call a([]) -> id_0
+    "#,
+    );
+}
+
+#[test]
+fn no_arg_call_in_expression() {
+    compile_eq(
+        "a() + b() * c()",
+        r#"
+fix fn id_1([id_2]) =>
+    fix fn id_4([id_5]) =>
+        fix fn id_6([id_7]) =>
+            Mul([id_5, id_7]) -> ([id_3]) =>
+                Add([id_2, id_3]) -> ([id_0]) =>
+                    Term([id_0]) -> ([]) =>
+            continue with:
+                call c([]) -> id_6
+        continue with:
+            call b([]) -> id_4
+    continue with:
+        call a([]) -> id_1
+    "#,
+    );
+}
+
+#[test]
+fn one_arg_int_call() {
+    compile_eq(
+        "a(5)",
+        r#"
+fix fn id_0([id_1]) =>
+    Term([id_1]) -> ([]) =>
+    continue with:
+        call a([5]) -> id_0
+    "#,
+    );
+}
+
+#[test]
+fn one_arg_expression_call() {
+    compile_eq(
+        "a(5 + 10)",
+        r#"
+fix fn id_0([id_1]) =>
+    Term([id_1]) -> ([]) =>
+    continue with:
+        Add([5, 10]) -> ([id_2]) =>
+            call a([id_2]) -> id_0
+    "#,
+    );
+}
 
 #[test]
 fn appel_13() {
-    compile_eq( "(a + 1) * (c + 3)",
+    compile_eq(
+        "(a + 1) * (c + 3)",
         r#"
 Add([a, 1]) -> ([id_1]) =>
     Add([c, 3]) -> ([id_2]) =>
@@ -60,9 +126,11 @@ Add([a, 1]) -> ([id_1]) =>
 }
 #[test]
 fn appel_13_mod() {
-    compile_eq("a + b * c",
-    r#"
+    compile_eq(
+        "a + b * c",
+        r#"
 Mul([b, c]) -> ([id_1]) =>
     Add([a, id_1]) -> ([id_0]) =>
-        Term([id_0]) -> ([]) =>"#);
+        Term([id_0]) -> ([]) =>"#,
+    );
 }

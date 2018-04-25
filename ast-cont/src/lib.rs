@@ -8,6 +8,8 @@ extern crate difference;
 
 #[cfg(test)]
 mod test;
+mod binary;
+mod call;
 
 use parser::Ast;
 use std::boxed::FnBox;
@@ -16,6 +18,7 @@ use std::fmt::{Debug, Formatter, Result as FmtResult, Write};
 use typed_arena::Arena;
 
 pub type ContAstPtr<'parse> = &'parse ContAst<'parse>;
+type WithContinue<'c> = Box<FnBox(Terminal<'c>) -> ContAstPtr<'c> + 'c>;
 
 pub struct IdGet {
     id: RefCell<u32>,
@@ -43,8 +46,24 @@ pub enum PrimOpKind {
     Div,
 }
 
+#[derive(PartialEq, Debug)]
+pub struct Function<'a> {
+    name: Ident<'a>,
+    params: Vec<Ident<'a>>,
+    body: ContAstPtr<'a>,
+}
+
 #[derive(PartialEq)]
 pub enum ContAst<'parse> {
+    Fix {
+        functions: Vec<Function<'parse>>,
+        continuation: ContAstPtr<'parse>,
+    },
+    Call {
+        target: Terminal<'parse>,
+        params: Vec<Terminal<'parse>>,
+        continuation: Terminal<'parse>
+    },
     Primop {
         op: PrimOpKind,
         terminals: Vec<Terminal<'parse>>,
@@ -55,51 +74,21 @@ pub enum ContAst<'parse> {
 
 pub fn translate<'c>(
     ast: &'c Ast<'c>,
-    c: Box<FnBox(Terminal<'c>) -> ContAstPtr<'c> + 'c>,
+    c: WithContinue<'c>,
     idg: &'c IdGet,
     arena: &'c Arena<ContAst<'c>>,
 ) -> ContAstPtr<'c> {
     match ast {
-        &Ast::Add(l, r) => do_binary(l, r, c, PrimOpKind::Add, idg, arena),
-        &Ast::Mul(l, r) => do_binary(l, r, c, PrimOpKind::Mul, idg, arena),
-        &Ast::Sub(l, r) => do_binary(l, r, c, PrimOpKind::Sub, idg, arena),
-        &Ast::Div(l, r) => do_binary(l, r, c, PrimOpKind::Div, idg, arena),
+        &Ast::Add(l, r) => binary::do_binary(l, r, c, PrimOpKind::Add, idg, arena),
+        &Ast::Mul(l, r) => binary::do_binary(l, r, c, PrimOpKind::Mul, idg, arena),
+        &Ast::Sub(l, r) => binary::do_binary(l, r, c, PrimOpKind::Sub, idg, arena),
+        &Ast::Div(l, r) => binary::do_binary(l, r, c, PrimOpKind::Div, idg, arena),
         &Ast::Integer(_, i) => c(Terminal::Integer(i)),
         &Ast::Float(_, f) => c(Terminal::Float(f)),
         &Ast::Identifier(_, s) => c(Terminal::Ident(Ident::Identifier(s))),
+        &Ast::FunctionCall{ref target, ref args} => call::do_call(target, &*args, c, idg, arena),
         _ => unimplemented!(),
     }
-}
-
-fn do_binary<'c>(
-    l: &'c Ast,
-    r: &'c Ast,
-    c: Box<FnBox(Terminal<'c>) -> ContAstPtr<'c> + 'c>,
-    op: PrimOpKind,
-    idg: &'c IdGet,
-    arena: &'c Arena<ContAst<'c>>,
-) -> ContAstPtr<'c> {
-    let id = idg.get();
-    translate(
-        l,
-        Box::new(move |lv: Terminal<'c>| {
-            translate(
-                r,
-                Box::new(move |rv: Terminal<'c>| {
-                    arena.alloc(ContAst::Primop {
-                        op: op,
-                        terminals: vec![lv, rv],
-                        exports: vec![id],
-                        continuations: vec![c(Terminal::Ident(id))],
-                    }) as &_
-                }),
-                idg,
-                arena,
-            )
-        }),
-        idg,
-        arena,
-    )
 }
 
 impl IdGet {
@@ -150,7 +139,7 @@ pub fn smart_print<'a>(
     use ContAst::*;
 
     fn indent(out: &mut Formatter, n: u32) -> FmtResult {
-        for _ in 0..n {
+        for _ in 0..(n * 4) {
             out.write_char(' ')?;
         }
         Ok(())
@@ -164,11 +153,29 @@ pub fn smart_print<'a>(
             ref continuations,
         } => {
             indent(out, indent_count)?;
-            write!(out, "{:?}({:?}) -> ({:?}) =>", op, terminals, exports)?;
-            out.write_char('\n')?;
+            writeln!(out, "{:?}({:?}) -> ({:?}) =>", op, terminals, exports)?;
             for cont in continuations {
-                smart_print(cont, out, indent_count + 4)?;
+                smart_print(cont, out, indent_count + 1)?;
             }
+        }
+        &Fix { ref functions, ref continuation } => {
+            for &Function{ref name, ref params, ref body} in functions {
+                indent(out, indent_count)?;
+                writeln!(out, "fix fn {:?}({:?}) =>", name, params)?;
+                smart_print(body, out, indent_count + 1)?;
+            }
+            indent(out, indent_count + 1)?;
+            writeln!(out, "continue with:")?;
+            smart_print(continuation, out, indent_count + 2)?;
+        }
+        &Call {
+            ref target,
+            ref params,
+            ref continuation,
+        } => {
+            indent(out, indent_count)?;
+            write!(out, "call {:?}({:?}) -> {:?}", target, params, continuation)?;
+            out.write_char('\n')?;
         }
     }
 
