@@ -1,0 +1,10 @@
+[package]
+name = "ast-lower"
+version = "0.1.0"
+authors = ["Ty Overby <ty@pre-alpha.com>"]
+
+[dependencies.parser]
+path = "../parser"
+
+[dependencies.lexer]
+path = "../lexer"

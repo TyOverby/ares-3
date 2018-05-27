@@ -1,59 +1,11 @@
 extern crate lexer;
-extern crate typed_arena;
+extern crate parser;
 
-#[macro_use]
-mod macros;
-mod util;
-mod test_util;
-mod parts;
-
-use std::collections::HashMap;
-use lexer::{Token, TokenKind};
-pub use parts::*;
-
-type Arena<'parse> = &'parse typed_arena::Arena<Ast<'parse>>;
-
-pub type Parser<'a> = &'a for<'parse> Fn(
-    &'parse [Token<'parse>],
-    Arena<'parse>,
-    &mut ParseCache<'parse>,
-) -> Result<'parse>;
-
-
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub enum CacheKey {
-    Function,
-    Additive,
-    Multiplicative,
-    Expression,
-    FieldAccess,
-}
-
-type Result<'parse> = std::result::Result<
-    (&'parse Ast<'parse>, &'parse [Token<'parse>]),
-    (ParseError<'parse>, &'parse [Token<'parse>]),
->;
-
-#[derive(Clone, Debug)]
-pub enum ParseError<'parse> {
-    UnexpectedToken {
-        found: &'parse Token<'parse>,
-        expected: &'static str,
-    },
-    Working,
-    EndOfFileReached,
-}
+use lexer::Token;
+use parser::Ast;
 
 #[derive(Debug)]
-pub enum CacheState<'parse> {
-    Working,
-    Done((&'parse Ast<'parse>, &'parse [Token<'parse>])),
-    Failed((ParseError<'parse>, &'parse [Token<'parse>])),
-}
-type ParseCache<'parse> = HashMap<(usize, CacheKey), CacheState<'parse>>;
-
-#[derive(Debug)]
-pub enum Ast<'parse> {
+pub enum LoweredAst<'parse> {
     Identifier(&'parse Token<'parse>, &'parse str),
     Integer(&'parse Token<'parse>, i64),
     Float(&'parse Token<'parse>, f64),

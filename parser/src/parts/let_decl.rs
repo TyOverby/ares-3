@@ -1,42 +1,57 @@
-use ::*;
+use *;
+
+pub fn parse_arg_list<'parse>(
+    mut tokens_u: &'parse [Token<'parse>],
+    arena: Arena<'parse>,
+    cache: &mut ParseCache<'parse>,
+) -> std::result::Result<
+    (
+        Vec<(&'parse str, &'parse Ast<'parse>)>,
+        &'parse [Token<'parse>],
+    ),
+    (ParseError<'parse>, &'parse [Token<'parse>]),
+> {
+    let mut params = vec![];
+    loop {
+        let (param, tokens) = parse_identifier(tokens_u, arena, cache)?;
+        if let &Ast::Identifier(_, s) = param {
+            params.push((s, param));
+        } else {
+            unreachable!();
+        }
+
+        let (comma_or_end, tokens) = expect_token_type!(
+            tokens,
+            TokenKind::CloseParen | TokenKind::Comma,
+            "comma or close parenthesis"
+        )?;
+        tokens_u = tokens;
+        if let &Token {
+            kind: TokenKind::CloseParen,
+            ..
+        } = comma_or_end
+        {
+            break;
+        }
+    }
+    return Ok((params, tokens_u));
+}
 
 fn parse_function_params<'parse>(
-    mut tokens_u: &'parse [Token<'parse>],
+    tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
     cache: &mut ParseCache<'parse>,
     name: &'parse str,
     name_ast: &'parse Ast<'parse>,
 ) -> Result<'parse> {
-    let mut params = vec![];
-    if let Ok((_, tokens)) =
-        expect_token_type!(tokens_u, TokenKind::CloseParen, "close parenthesis")
+    let (params, tokens) = if let Ok((_, tokens)) =
+        expect_token_type!(tokens, TokenKind::CloseParen, "close parenthesis")
     {
-        tokens_u = tokens;
+        (vec![], tokens)
     } else {
-        loop {
-            let (param, tokens) = parse_identifier(tokens_u, arena, cache)?;
-            if let &Ast::Identifier(_, s) = param {
-                params.push((s, param));
-            } else {
-                unreachable!();
-            }
+        parse_arg_list(tokens, arena, cache)?
+    };
 
-            let (comma_or_end, tokens) = expect_token_type!(
-                tokens,
-                TokenKind::CloseParen | TokenKind::Comma,
-                "comma or close parenthesis"
-            )?;
-            tokens_u = tokens;
-            if let &Token {
-                kind: TokenKind::CloseParen,
-                ..
-            } = comma_or_end
-            {
-                break;
-            }
-        }
-    }
-    let tokens = tokens_u;
     let (_, tokens) = expect_token_type!(tokens, TokenKind::Equal, "= (equal)")?;
     let (body, tokens) = parse_expression(tokens, arena, cache)?;
     let (_, tokens) = expect_token_type!(tokens, TokenKind::Semicolon, "; (semicolon)")?;

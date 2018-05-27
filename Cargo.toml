@@ -1,3 +1,14 @@
 [workspace]
 
-members = ["vm", "linked-stack", "lexer", "parser", "binder", "emit", "semantics-test", "repl", "ast-cont"]
+members = [
+    "vm",
+    "linked-stack",
+    "lexer",
+    "parser",
+    "binder",
+    "emit",
+    "semantics-test",
+    "repl",
+    "ast-cont",
+    "ast-lower"
+]

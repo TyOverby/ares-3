@@ -1,4 +1,4 @@
-use ::*;
+use *;
 
 pub fn parse_base<'parse>(
     tokens: &'parse [Token<'parse>],
@@ -10,6 +10,10 @@ pub fn parse_base<'parse>(
     }
 
     if let Ok(res) = parse_number(tokens, arena, cache) {
+        return Ok(res);
+    }
+
+    if let Ok(res) = parse_anon_func(tokens, arena, cache) {
         return Ok(res);
     }
 

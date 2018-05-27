@@ -27,6 +27,7 @@ pub enum TokenKind<'lex> {
     Div,
     Mul,
     Let,
+    WideArrow,
     Equal,
     Whitespace(&'lex str),
     Identifier(&'lex str),
@@ -63,6 +64,7 @@ pub fn lex<'lex>(input: &'lex str) -> Vec<Token<'lex>> {
         (r"/", Box::new(|_| TokenKind::Div)),
         (r"(debug)($|[ \n\t\(])", Box::new(|_| TokenKind::DebugKeyword)),
         (r"(let)($|[ \n\t])", Box::new(|_| TokenKind::Let)),
+        (r"=>", Box::new(|_| TokenKind::WideArrow)),
         (r"=", Box::new(|_| TokenKind::Equal)),
         (r"\*", Box::new(|_| TokenKind::Mul)),
         (r"[ \n\t]+", Box::new(|s| TokenKind::Whitespace(s))),
@@ -324,6 +326,34 @@ fn lex_debug_keyword() {
                 kind: TokenKind::DebugKeyword,
                 start_byte: 0,
                 end_byte: 5,
+            },
+        ]
+    );
+}
+
+#[test]
+fn lex_equal() {
+    assert_eq!(
+        lex("="),
+        vec![
+            Token {
+                kind: TokenKind::Equal,
+                start_byte: 0,
+                end_byte: 1,
+            },
+        ]
+    );
+}
+
+#[test]
+fn lex_wide_arrow() {
+    assert_eq!(
+        lex("=>"),
+        vec![
+            Token {
+                kind: TokenKind::WideArrow,
+                start_byte: 0,
+                end_byte: 2,
             },
         ]
     );
