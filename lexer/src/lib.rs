@@ -27,6 +27,7 @@ pub enum TokenKind<'lex> {
     Div,
     Mul,
     Let,
+    Underscore,
     WideArrow,
     Equal,
     Whitespace(&'lex str),
@@ -35,7 +36,6 @@ pub enum TokenKind<'lex> {
     Float(f64),
     Error(&'lex str),
 }
-
 
 pub fn remove_whitespace(tokens: &mut Vec<Token>) {
     tokens.retain(|token| {
@@ -62,12 +62,16 @@ pub fn lex<'lex>(input: &'lex str) -> Vec<Token<'lex>> {
         (r"\+", Box::new(|_| TokenKind::Plus)),
         (r"-", Box::new(|_| TokenKind::Minus)),
         (r"/", Box::new(|_| TokenKind::Div)),
-        (r"(debug)($|[ \n\t\(])", Box::new(|_| TokenKind::DebugKeyword)),
+        (
+            r"(debug)($|[ \n\t\(])",
+            Box::new(|_| TokenKind::DebugKeyword),
+        ),
         (r"(let)($|[ \n\t])", Box::new(|_| TokenKind::Let)),
         (r"=>", Box::new(|_| TokenKind::WideArrow)),
         (r"=", Box::new(|_| TokenKind::Equal)),
         (r"\*", Box::new(|_| TokenKind::Mul)),
         (r"[ \n\t]+", Box::new(|s| TokenKind::Whitespace(s))),
+        (r"(_)($|[^a-zA-Z0-9_])", Box::new(|_| TokenKind::Underscore)),
         (r"[a-zA-Z_][a-zA-Z0-9_]*", Box::new(TokenKind::Identifier)),
         (
             r"[0-9]*\.[0-9]+",
@@ -123,24 +127,20 @@ pub fn lex<'lex>(input: &'lex str) -> Vec<Token<'lex>> {
 fn lex_parens() {
     assert_eq!(
         lex("("),
-        vec![
-            Token {
-                kind: TokenKind::OpenParen,
-                start_byte: 0,
-                end_byte: 1,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::OpenParen,
+            start_byte: 0,
+            end_byte: 1,
+        }]
     );
 
     assert_eq!(
         lex(")"),
-        vec![
-            Token {
-                kind: TokenKind::CloseParen,
-                start_byte: 0,
-                end_byte: 1,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::CloseParen,
+            start_byte: 0,
+            end_byte: 1,
+        }]
     );
 }
 
@@ -148,24 +148,20 @@ fn lex_parens() {
 fn lex_bracket() {
     assert_eq!(
         lex("["),
-        vec![
-            Token {
-                kind: TokenKind::OpenBracket,
-                start_byte: 0,
-                end_byte: 1,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::OpenBracket,
+            start_byte: 0,
+            end_byte: 1,
+        }]
     );
 
     assert_eq!(
         lex("]"),
-        vec![
-            Token {
-                kind: TokenKind::CloseBracket,
-                start_byte: 0,
-                end_byte: 1,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::CloseBracket,
+            start_byte: 0,
+            end_byte: 1,
+        }]
     );
 }
 
@@ -173,24 +169,20 @@ fn lex_bracket() {
 fn lex_brace() {
     assert_eq!(
         lex("{"),
-        vec![
-            Token {
-                kind: TokenKind::OpenBrace,
-                start_byte: 0,
-                end_byte: 1,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::OpenBrace,
+            start_byte: 0,
+            end_byte: 1,
+        }]
     );
 
     assert_eq!(
         lex("}"),
-        vec![
-            Token {
-                kind: TokenKind::CloseBrace,
-                start_byte: 0,
-                end_byte: 1,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::CloseBrace,
+            start_byte: 0,
+            end_byte: 1,
+        }]
     );
 }
 
@@ -198,13 +190,11 @@ fn lex_brace() {
 fn lex_integers() {
     assert_eq!(
         lex("123"),
-        vec![
-            Token {
-                kind: TokenKind::Integer(123),
-                start_byte: 0,
-                end_byte: 3,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::Integer(123),
+            start_byte: 0,
+            end_byte: 3,
+        }]
     );
 }
 
@@ -212,13 +202,11 @@ fn lex_integers() {
 fn lex_float() {
     assert_eq!(
         lex("1.2"),
-        vec![
-            Token {
-                kind: TokenKind::Float(1.2),
-                start_byte: 0,
-                end_byte: 3,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::Float(1.2),
+            start_byte: 0,
+            end_byte: 3,
+        }]
     );
 }
 
@@ -226,13 +214,11 @@ fn lex_float() {
 fn lex_whitespace() {
     assert_eq!(
         lex(" \n\t"),
-        vec![
-            Token {
-                kind: TokenKind::Whitespace(" \n\t"),
-                start_byte: 0,
-                end_byte: 3,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::Whitespace(" \n\t"),
+            start_byte: 0,
+            end_byte: 3,
+        }]
     );
 }
 
@@ -240,13 +226,11 @@ fn lex_whitespace() {
 fn lex_error() {
     assert_eq!(
         lex("ø"),
-        vec![
-            Token {
-                kind: TokenKind::Error("ø"),
-                start_byte: 0,
-                end_byte: 2,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::Error("ø"),
+            start_byte: 0,
+            end_byte: 2,
+        }]
     );
 }
 
@@ -254,33 +238,27 @@ fn lex_error() {
 fn lex_punctuation() {
     assert_eq!(
         lex("."),
-        vec![
-            Token {
-                kind: TokenKind::Dot,
-                start_byte: 0,
-                end_byte: 1,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::Dot,
+            start_byte: 0,
+            end_byte: 1,
+        }]
     );
     assert_eq!(
         lex(";"),
-        vec![
-            Token {
-                kind: TokenKind::Semicolon,
-                start_byte: 0,
-                end_byte: 1,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::Semicolon,
+            start_byte: 0,
+            end_byte: 1,
+        }]
     );
     assert_eq!(
         lex(","),
-        vec![
-            Token {
-                kind: TokenKind::Comma,
-                start_byte: 0,
-                end_byte: 1,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::Comma,
+            start_byte: 0,
+            end_byte: 1,
+        }]
     );
 }
 
@@ -288,13 +266,11 @@ fn lex_punctuation() {
 fn lex_pipeline() {
     assert_eq!(
         lex("|>"),
-        vec![
-            Token {
-                kind: TokenKind::Pipeline,
-                start_byte: 0,
-                end_byte: 2,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::Pipeline,
+            start_byte: 0,
+            end_byte: 2,
+        }]
     );
 }
 
@@ -321,13 +297,11 @@ fn lex_let_with_spaces() {
 fn lex_debug_keyword() {
     assert_eq!(
         lex("debug"),
-        vec![
-            Token {
-                kind: TokenKind::DebugKeyword,
-                start_byte: 0,
-                end_byte: 5,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::DebugKeyword,
+            start_byte: 0,
+            end_byte: 5,
+        }]
     );
 }
 
@@ -335,13 +309,11 @@ fn lex_debug_keyword() {
 fn lex_equal() {
     assert_eq!(
         lex("="),
-        vec![
-            Token {
-                kind: TokenKind::Equal,
-                start_byte: 0,
-                end_byte: 1,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::Equal,
+            start_byte: 0,
+            end_byte: 1,
+        }]
     );
 }
 
@@ -349,13 +321,11 @@ fn lex_equal() {
 fn lex_wide_arrow() {
     assert_eq!(
         lex("=>"),
-        vec![
-            Token {
-                kind: TokenKind::WideArrow,
-                start_byte: 0,
-                end_byte: 2,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::WideArrow,
+            start_byte: 0,
+            end_byte: 2,
+        }]
     );
 }
 
@@ -382,13 +352,11 @@ fn lex_debug_keyword_with_spaces() {
 fn lex_let() {
     assert_eq!(
         lex("let"),
-        vec![
-            Token {
-                kind: TokenKind::Let,
-                start_byte: 0,
-                end_byte: 3,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::Let,
+            start_byte: 0,
+            end_byte: 3,
+        }]
     );
 }
 
@@ -396,13 +364,11 @@ fn lex_let() {
 fn identifier_that_starts_with_let() {
     assert_eq!(
         lex("letx"),
-        vec![
-            Token {
-                kind: TokenKind::Identifier("letx"),
-                start_byte: 0,
-                end_byte: 4,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::Identifier("letx"),
+            start_byte: 0,
+            end_byte: 4,
+        }]
     );
 }
 
@@ -410,13 +376,35 @@ fn identifier_that_starts_with_let() {
 fn lex_identifier() {
     assert_eq!(
         lex("abc"),
-        vec![
-            Token {
-                kind: TokenKind::Identifier("abc"),
-                start_byte: 0,
-                end_byte: 3,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::Identifier("abc"),
+            start_byte: 0,
+            end_byte: 3,
+        }]
+    );
+}
+
+#[test]
+fn lex_identifier_that_starts_with_underscore() {
+    assert_eq!(
+        lex("_abc"),
+        vec![Token {
+            kind: TokenKind::Identifier("_abc"),
+            start_byte: 0,
+            end_byte: 4,
+        }]
+    );
+}
+
+#[test]
+fn lex_underscore() {
+    assert_eq!(
+        lex("_"),
+        vec![Token {
+            kind: TokenKind::Underscore,
+            start_byte: 0,
+            end_byte: 1,
+        }]
     );
 }
 
@@ -424,13 +412,11 @@ fn lex_identifier() {
 fn lex_identifier_with_numbers() {
     assert_eq!(
         lex("abc1"),
-        vec![
-            Token {
-                kind: TokenKind::Identifier("abc1"),
-                start_byte: 0,
-                end_byte: 4,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::Identifier("abc1"),
+            start_byte: 0,
+            end_byte: 4,
+        }]
     );
 }
 
@@ -438,43 +424,35 @@ fn lex_identifier_with_numbers() {
 fn lex_math() {
     assert_eq!(
         lex("+"),
-        vec![
-            Token {
-                kind: TokenKind::Plus,
-                start_byte: 0,
-                end_byte: 1,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::Plus,
+            start_byte: 0,
+            end_byte: 1,
+        }]
     );
     assert_eq!(
         lex("-"),
-        vec![
-            Token {
-                kind: TokenKind::Minus,
-                start_byte: 0,
-                end_byte: 1,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::Minus,
+            start_byte: 0,
+            end_byte: 1,
+        }]
     );
     assert_eq!(
         lex("/"),
-        vec![
-            Token {
-                kind: TokenKind::Div,
-                start_byte: 0,
-                end_byte: 1,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::Div,
+            start_byte: 0,
+            end_byte: 1,
+        }]
     );
     assert_eq!(
         lex("*"),
-        vec![
-            Token {
-                kind: TokenKind::Mul,
-                start_byte: 0,
-                end_byte: 1,
-            },
-        ]
+        vec![Token {
+            kind: TokenKind::Mul,
+            start_byte: 0,
+            end_byte: 1,
+        }]
     );
 }
 

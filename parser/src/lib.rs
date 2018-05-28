@@ -3,22 +3,19 @@ extern crate typed_arena;
 
 #[macro_use]
 mod macros;
-mod util;
-mod test_util;
 mod parts;
+mod test_util;
+mod util;
 
-use std::collections::HashMap;
 use lexer::{Token, TokenKind};
 pub use parts::*;
+use std::collections::HashMap;
 
 type Arena<'parse> = &'parse typed_arena::Arena<Ast<'parse>>;
 
-pub type Parser<'a> = &'a for<'parse> Fn(
-    &'parse [Token<'parse>],
-    Arena<'parse>,
-    &mut ParseCache<'parse>,
-) -> Result<'parse>;
-
+pub type Parser<'a> =
+    &'a for<'parse> Fn(&'parse [Token<'parse>], Arena<'parse>, &mut ParseCache<'parse>)
+        -> Result<'parse>;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum CacheKey {
@@ -53,13 +50,19 @@ pub enum CacheState<'parse> {
 type ParseCache<'parse> = HashMap<(usize, CacheKey), CacheState<'parse>>;
 
 #[derive(Debug)]
+pub enum ArgumentSyntax<'parse> {
+    Expression(&'parse Ast<'parse>),
+    Underscore,
+}
+
+#[derive(Debug)]
 pub enum Ast<'parse> {
     Identifier(&'parse Token<'parse>, &'parse str),
     Integer(&'parse Token<'parse>, i64),
     Float(&'parse Token<'parse>, f64),
     FunctionCall {
         target: &'parse Ast<'parse>,
-        args: Vec<&'parse Ast<'parse>>,
+        args: Vec<ArgumentSyntax<'parse>>,
     },
     DebugCall(&'parse Ast<'parse>),
     Pipeline(&'parse Ast<'parse>, &'parse Ast<'parse>),

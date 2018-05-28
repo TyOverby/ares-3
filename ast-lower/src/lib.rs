@@ -5,8 +5,14 @@ use lexer::Token;
 use parser::Ast;
 
 #[derive(Debug)]
+pub enum Identifier<'parse> {
+    Ident(&'parse Token<'parse>, &'parse str),
+    Phantom(u32),
+}
+
+#[derive(Debug)]
 pub enum LoweredAst<'parse> {
-    Identifier(&'parse Token<'parse>, &'parse str),
+    Identifier(Identifier<'parse>),
     Integer(&'parse Token<'parse>, i64),
     Float(&'parse Token<'parse>, f64),
     FunctionCall {
@@ -14,7 +20,6 @@ pub enum LoweredAst<'parse> {
         args: Vec<&'parse Ast<'parse>>,
     },
     DebugCall(&'parse Ast<'parse>),
-    Pipeline(&'parse Ast<'parse>, &'parse Ast<'parse>),
     Add(&'parse Ast<'parse>, &'parse Ast<'parse>),
     Sub(&'parse Ast<'parse>, &'parse Ast<'parse>),
     Div(&'parse Ast<'parse>, &'parse Ast<'parse>),
