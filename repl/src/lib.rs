@@ -5,16 +5,16 @@ extern crate parser;
 extern crate typed_arena;
 extern crate vm;
 
-use parser::Ast;
-use typed_arena::Arena;
-use vm::value::Value;
 use binder::{bind, BindingState, Bound, DeclarationKind, ModuleBinder};
-use std::collections::HashSet;
-use vm::vm::Vm;
-use vm::value::{new_func, Function};
 use lexer::{lex, remove_whitespace, Token};
+use parser::Ast;
 use parser::{parse_expression, parse_statement};
 use std::collections::HashMap;
+use std::collections::HashSet;
+use typed_arena::Arena;
+use vm::value::Value;
+use vm::value::{new_func, Function};
+use vm::vm::Vm;
 
 #[derive(Clone, Debug)]
 pub struct StorableModuleBinder {
@@ -28,8 +28,8 @@ pub enum ReplOutKind {
 }
 
 enum ReplParseResult<'parse> {
-    Expression(&'parse Ast<'parse>),
-    Statement(&'parse Ast<'parse>),
+    Expression(AstPtr<'parse>),
+    Statement(AstPtr<'parse>),
     KeepTrying,
     Error(parser::ParseError<'parse>),
 }
@@ -66,7 +66,7 @@ impl StorableModuleBinder {
 fn repl_parse_expression<'parse>(
     lexed: &'parse [Token<'parse>],
     arena: &'parse Arena<Ast<'parse>>,
-) -> Result<&'parse Ast<'parse>, parser::ParseError<'parse>> {
+) -> Result<AstPtr<'parse>, parser::ParseError<'parse>> {
     let mut cache = HashMap::new();
 
     let parsed = parse_expression(&lexed, &arena, &mut cache);
@@ -80,7 +80,7 @@ fn repl_parse_expression<'parse>(
 fn repl_parse_statement<'parse>(
     lexed: &'parse [Token<'parse>],
     arena: &'parse Arena<Ast<'parse>>,
-) -> Result<&'parse Ast<'parse>, parser::ParseError<'parse>> {
+) -> Result<AstPtr<'parse>, parser::ParseError<'parse>> {
     let mut cache = HashMap::new();
 
     let parsed = parse_statement(&lexed, &arena, &mut cache);

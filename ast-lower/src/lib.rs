@@ -2,7 +2,7 @@ extern crate lexer;
 extern crate parser;
 
 use lexer::Token;
-use parser::Ast;
+use parser::AstPtr;
 
 #[derive(Debug)]
 pub enum Identifier<'parse> {
@@ -10,46 +10,48 @@ pub enum Identifier<'parse> {
     Phantom(u32),
 }
 
+pub type LoweredAstPtr<'parse> = &'parse LoweredAst<'parse>;
+
 #[derive(Debug)]
 pub enum LoweredAst<'parse> {
     Identifier(Identifier<'parse>),
     Integer(&'parse Token<'parse>, i64),
     Float(&'parse Token<'parse>, f64),
     FunctionCall {
-        target: &'parse Ast<'parse>,
-        args: Vec<&'parse Ast<'parse>>,
+        target: AstPtr<'parse>,
+        args: Vec<AstPtr<'parse>>,
     },
-    DebugCall(&'parse Ast<'parse>),
-    Add(&'parse Ast<'parse>, &'parse Ast<'parse>),
-    Sub(&'parse Ast<'parse>, &'parse Ast<'parse>),
-    Div(&'parse Ast<'parse>, &'parse Ast<'parse>),
-    Mul(&'parse Ast<'parse>, &'parse Ast<'parse>),
+    DebugCall(AstPtr<'parse>),
+    Add(AstPtr<'parse>, AstPtr<'parse>),
+    Sub(AstPtr<'parse>, AstPtr<'parse>),
+    Div(AstPtr<'parse>, AstPtr<'parse>),
+    Mul(AstPtr<'parse>, AstPtr<'parse>),
     AnonFunc {
-        params: Vec<(&'parse str, &'parse Ast<'parse>)>,
-        body: &'parse Ast<'parse>,
+        params: Vec<(&'parse str, AstPtr<'parse>)>,
+        body: AstPtr<'parse>,
     },
     FunctionDecl {
         name: &'parse str,
-        name_ast: &'parse Ast<'parse>,
-        params: Vec<(&'parse str, &'parse Ast<'parse>)>,
-        body: &'parse Ast<'parse>,
+        name_ast: AstPtr<'parse>,
+        params: Vec<(&'parse str, AstPtr<'parse>)>,
+        body: AstPtr<'parse>,
     },
     VariableDecl {
         name: &'parse str,
-        name_ast: &'parse Ast<'parse>,
-        expression: &'parse Ast<'parse>,
+        name_ast: AstPtr<'parse>,
+        expression: AstPtr<'parse>,
     },
     FieldAccess {
-        target: &'parse Ast<'parse>,
-        field: &'parse Ast<'parse>,
+        target: AstPtr<'parse>,
+        field: AstPtr<'parse>,
         field_name: &'parse str,
     },
     Module {
-        statements: Vec<&'parse Ast<'parse>>,
+        statements: Vec<AstPtr<'parse>>,
         module_id: &'parse str,
     },
     BlockExpr {
-        statements: Vec<&'parse Ast<'parse>>,
-        final_expression: &'parse Ast<'parse>,
+        statements: Vec<AstPtr<'parse>>,
+        final_expression: AstPtr<'parse>,
     },
 }

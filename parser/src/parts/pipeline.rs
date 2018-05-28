@@ -4,7 +4,7 @@ fn parse_pipeline_right<'parse>(
     tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
     lower: Parser,
-    prev: &'parse Ast<'parse>,
+    prev: AstPtr<'parse>,
 ) -> Result<'parse> {
     let tokens = match expect_token_type!(tokens, TokenKind::Pipeline, "|> (pipeline)") {
         Ok((_, tokens)) => tokens,

@@ -13,8 +13,10 @@ type Arena<'parse> = &'parse typed_arena::Arena<Ast<'parse>>;
 
 pub type Parser<'a> = &'a for<'parse> Fn(&'parse [Token<'parse>], Arena<'parse>) -> Result<'parse>;
 
+pub type AstPtr<'parse> = &'parse Ast<'parse>;
+
 type Result<'parse> = std::result::Result<
-    (&'parse Ast<'parse>, &'parse [Token<'parse>]),
+    (AstPtr<'parse>, &'parse [Token<'parse>]),
     (ParseError<'parse>, &'parse [Token<'parse>]),
 >;
 
@@ -30,7 +32,7 @@ pub enum ParseError<'parse> {
 
 #[derive(Debug)]
 pub enum ArgumentSyntax<'parse> {
-    Expression(&'parse Ast<'parse>),
+    Expression(AstPtr<'parse>),
     Underscore,
 }
 
@@ -40,41 +42,41 @@ pub enum Ast<'parse> {
     Integer(&'parse Token<'parse>, i64),
     Float(&'parse Token<'parse>, f64),
     FunctionCall {
-        target: &'parse Ast<'parse>,
+        target: AstPtr<'parse>,
         args: Vec<ArgumentSyntax<'parse>>,
     },
-    DebugCall(&'parse Ast<'parse>),
-    Pipeline(&'parse Ast<'parse>, &'parse Ast<'parse>),
-    Add(&'parse Ast<'parse>, &'parse Ast<'parse>),
-    Sub(&'parse Ast<'parse>, &'parse Ast<'parse>),
-    Div(&'parse Ast<'parse>, &'parse Ast<'parse>),
-    Mul(&'parse Ast<'parse>, &'parse Ast<'parse>),
+    DebugCall(AstPtr<'parse>),
+    Pipeline(AstPtr<'parse>, AstPtr<'parse>),
+    Add(AstPtr<'parse>, AstPtr<'parse>),
+    Sub(AstPtr<'parse>, AstPtr<'parse>),
+    Div(AstPtr<'parse>, AstPtr<'parse>),
+    Mul(AstPtr<'parse>, AstPtr<'parse>),
     AnonFunc {
-        params: Vec<(&'parse str, &'parse Ast<'parse>)>,
-        body: &'parse Ast<'parse>,
+        params: Vec<(&'parse str, AstPtr<'parse>)>,
+        body: AstPtr<'parse>,
     },
     FunctionDecl {
         name: &'parse str,
-        name_ast: &'parse Ast<'parse>,
-        params: Vec<(&'parse str, &'parse Ast<'parse>)>,
-        body: &'parse Ast<'parse>,
+        name_ast: AstPtr<'parse>,
+        params: Vec<(&'parse str, AstPtr<'parse>)>,
+        body: AstPtr<'parse>,
     },
     VariableDecl {
         name: &'parse str,
-        name_ast: &'parse Ast<'parse>,
-        expression: &'parse Ast<'parse>,
+        name_ast: AstPtr<'parse>,
+        expression: AstPtr<'parse>,
     },
     FieldAccess {
-        target: &'parse Ast<'parse>,
-        field: &'parse Ast<'parse>,
+        target: AstPtr<'parse>,
+        field: AstPtr<'parse>,
         field_name: &'parse str,
     },
     Module {
-        statements: Vec<&'parse Ast<'parse>>,
+        statements: Vec<AstPtr<'parse>>,
         module_id: &'parse str,
     },
     BlockExpr {
-        statements: Vec<&'parse Ast<'parse>>,
-        final_expression: &'parse Ast<'parse>,
+        statements: Vec<AstPtr<'parse>>,
+        final_expression: AstPtr<'parse>,
     },
 }

@@ -4,10 +4,7 @@ pub fn parse_arg_list<'parse>(
     mut tokens_u: &'parse [Token<'parse>],
     arena: Arena<'parse>,
 ) -> std::result::Result<
-    (
-        Vec<(&'parse str, &'parse Ast<'parse>)>,
-        &'parse [Token<'parse>],
-    ),
+    (Vec<(&'parse str, AstPtr<'parse>)>, &'parse [Token<'parse>]),
     (ParseError<'parse>, &'parse [Token<'parse>]),
 > {
     let mut params = vec![];
@@ -40,7 +37,7 @@ fn parse_function_params<'parse>(
     tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
     name: &'parse str,
-    name_ast: &'parse Ast<'parse>,
+    name_ast: AstPtr<'parse>,
 ) -> Result<'parse> {
     let (params, tokens) = if let Ok((_, tokens)) =
         expect_token_type!(tokens, TokenKind::CloseParen, "close parenthesis")

@@ -3,7 +3,7 @@ use *;
 fn parse_field_access_right<'parse>(
     tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
-    prev: &'parse Ast<'parse>,
+    prev: AstPtr<'parse>,
 ) -> Result<'parse> {
     let tokens = match expect_token_type!(tokens, TokenKind::Dot, "dot") {
         Ok((_, tokens)) => tokens,

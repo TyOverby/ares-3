@@ -4,7 +4,7 @@ fn parse_function_call_right<'parse>(
     tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
     lower: Parser,
-    prev: &'parse Ast<'parse>,
+    prev: AstPtr<'parse>,
 ) -> Result<'parse> {
     let mut tokens_u = match expect_token_type!(tokens, TokenKind::OpenParen, "open paren") {
         Ok((_, tokens)) => tokens,
