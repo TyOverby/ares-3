@@ -1,4 +1,4 @@
-use ::*;
+use *;
 
 fn parse_pipeline_right<'parse>(
     tokens: &'parse [Token<'parse>],
@@ -35,7 +35,7 @@ pub fn parse_pipeline<'parse>(
 fn basic_pipeline() {
     use test_util::with_parsed_expression;
 
-    with_parsed_expression("a|>c", |res| {
+    with_parsed_expression("a |> c", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::Pipeline(
@@ -50,7 +50,7 @@ fn basic_pipeline() {
 fn chained_pipeline() {
     use test_util::with_parsed_expression;
 
-    with_parsed_expression("a|>b|>c", |res| {
+    with_parsed_expression("a |> b |> c", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::Pipeline(
@@ -59,6 +59,21 @@ fn chained_pipeline() {
                     &Ast::Identifier(_, "b"),
                 ),
                 &Ast::Identifier(_, "c"),
+            )
+        };
+    });
+}
+
+#[test]
+fn pipeline_with_anon_func() {
+    use test_util::with_parsed_expression;
+
+    with_parsed_expression("a |> (x) => x", |res| {
+        let (res, _) = res.unwrap();
+        matches!{res,
+            &Ast::Pipeline(
+                &Ast::Identifier(_, "a"),
+                &Ast::AnonFunc{..}
             )
         };
     });

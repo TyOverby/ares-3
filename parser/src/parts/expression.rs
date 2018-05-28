@@ -21,9 +21,8 @@ pub fn parse_base<'parse>(
         return Ok(res);
     }
 
-    match parse_block_expression(tokens, arena, cache) {
-        Ok(res) => return Ok(res),
-        _ => {}
+    if let Ok(res) = parse_block_expression(tokens, arena, cache) {
+        return Ok(res);
     }
 
     if tokens.len() == 0 {
