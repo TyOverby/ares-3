@@ -5,26 +5,13 @@ extern crate typed_arena;
 mod macros;
 mod parts;
 mod test_util;
-mod util;
 
 use lexer::{Token, TokenKind};
 pub use parts::*;
-use std::collections::HashMap;
 
 type Arena<'parse> = &'parse typed_arena::Arena<Ast<'parse>>;
 
-pub type Parser<'a> =
-    &'a for<'parse> Fn(&'parse [Token<'parse>], Arena<'parse>, &mut ParseCache<'parse>)
-        -> Result<'parse>;
-
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub enum CacheKey {
-    Function,
-    Additive,
-    Multiplicative,
-    Expression,
-    FieldAccess,
-}
+pub type Parser<'a> = &'a for<'parse> Fn(&'parse [Token<'parse>], Arena<'parse>) -> Result<'parse>;
 
 type Result<'parse> = std::result::Result<
     (&'parse Ast<'parse>, &'parse [Token<'parse>]),
@@ -40,14 +27,6 @@ pub enum ParseError<'parse> {
     Working,
     EndOfFileReached,
 }
-
-#[derive(Debug)]
-pub enum CacheState<'parse> {
-    Working,
-    Done((&'parse Ast<'parse>, &'parse [Token<'parse>])),
-    Failed((ParseError<'parse>, &'parse [Token<'parse>])),
-}
-type ParseCache<'parse> = HashMap<(usize, CacheKey), CacheState<'parse>>;
 
 #[derive(Debug)]
 pub enum ArgumentSyntax<'parse> {

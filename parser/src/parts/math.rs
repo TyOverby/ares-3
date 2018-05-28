@@ -4,17 +4,16 @@ use *;
 pub fn parse_additive<'parse>(
     tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
-    cache: &mut ParseCache<'parse>,
     lower: Parser,
 ) -> Result<'parse> {
-    let (left, tokens) = lower(tokens, arena, cache)?;
+    let (left, tokens) = lower(tokens, arena)?;
     let rest: Result<'parse> = (|| {
         let (op, tokens) = expect_token_type!(
             tokens,
             TokenKind::Plus | TokenKind::Minus,
             "+ or - (add or subtract)"
         )?;
-        let (right, tokens) = me_or_fallback!(parse_additive, lower, (tokens, arena, cache))?;
+        let (right, tokens) = me_or_fallback!(parse_additive, lower, (tokens, arena))?;
         if op.kind == TokenKind::Plus {
             Ok((arena.alloc(Ast::Add(left, right)) as &_, tokens))
         } else {
@@ -27,17 +26,16 @@ pub fn parse_additive<'parse>(
 pub fn parse_multiplicative<'parse>(
     tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
-    cache: &mut ParseCache<'parse>,
     lower: Parser,
 ) -> Result<'parse> {
-    let (left, tokens) = lower(tokens, arena, cache)?;
+    let (left, tokens) = lower(tokens, arena)?;
     let rest: Result<'parse> = (|| {
         let (op, tokens) = expect_token_type!(
             tokens,
             TokenKind::Mul | TokenKind::Div,
             "* or / (multiply or divide)"
         )?;
-        let (right, tokens) = me_or_fallback!(parse_multiplicative, lower, (tokens, arena, cache))?;
+        let (right, tokens) = me_or_fallback!(parse_multiplicative, lower, (tokens, arena))?;
         if op.kind == TokenKind::Mul {
             Ok((arena.alloc(Ast::Mul(left, right)) as &_, tokens))
         } else {

@@ -3,7 +3,6 @@ use *;
 pub fn parse_arg_list<'parse>(
     mut tokens_u: &'parse [Token<'parse>],
     arena: Arena<'parse>,
-    cache: &mut ParseCache<'parse>,
 ) -> std::result::Result<
     (
         Vec<(&'parse str, &'parse Ast<'parse>)>,
@@ -13,7 +12,7 @@ pub fn parse_arg_list<'parse>(
 > {
     let mut params = vec![];
     loop {
-        let (param, tokens) = parse_identifier(tokens_u, arena, cache)?;
+        let (param, tokens) = parse_identifier(tokens_u, arena)?;
         if let &Ast::Identifier(_, s) = param {
             params.push((s, param));
         } else {
@@ -40,7 +39,6 @@ pub fn parse_arg_list<'parse>(
 fn parse_function_params<'parse>(
     tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
-    cache: &mut ParseCache<'parse>,
     name: &'parse str,
     name_ast: &'parse Ast<'parse>,
 ) -> Result<'parse> {
@@ -49,11 +47,11 @@ fn parse_function_params<'parse>(
     {
         (vec![], tokens)
     } else {
-        parse_arg_list(tokens, arena, cache)?
+        parse_arg_list(tokens, arena)?
     };
 
     let (_, tokens) = expect_token_type!(tokens, TokenKind::Equal, "= (equal)")?;
-    let (body, tokens) = parse_expression(tokens, arena, cache)?;
+    let (body, tokens) = parse_expression(tokens, arena)?;
     let (_, tokens) = expect_token_type!(tokens, TokenKind::Semicolon, "; (semicolon)")?;
     Ok((
         arena.alloc(Ast::FunctionDecl {
@@ -69,10 +67,9 @@ fn parse_function_params<'parse>(
 pub fn parse_let_decl<'parse>(
     tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
-    cache: &mut ParseCache<'parse>,
 ) -> Result<'parse> {
     let (_, tokens) = expect_token_type!(tokens, TokenKind::Let, "let (keyword)")?;
-    let (name, tokens) = parse_identifier(tokens, arena, cache)?;
+    let (name, tokens) = parse_identifier(tokens, arena)?;
     let name_s = if let &Ast::Identifier(_, s) = name {
         s
     } else {
@@ -84,9 +81,9 @@ pub fn parse_let_decl<'parse>(
         "'(' (open paren), '=' (equals)"
     )?;
     if tok.kind == TokenKind::OpenParen {
-        parse_function_params(tokens, arena, cache, name_s, name)
+        parse_function_params(tokens, arena, name_s, name)
     } else {
-        let (expression, tokens) = parse_expression(tokens, arena, cache)?;
+        let (expression, tokens) = parse_expression(tokens, arena)?;
         let (_, tokens) = expect_token_type!(tokens, TokenKind::Semicolon, "';' (semicolon)")?;
         Ok((
             arena.alloc(Ast::VariableDecl {

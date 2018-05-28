@@ -11,8 +11,7 @@ where
     let mut lexed = lex(string);
     remove_whitespace(&mut lexed);
     let arena = Arena::new();
-    let mut cache = HashMap::new();
-    let parsed = parse_expression(&lexed, &arena, &mut cache);
+    let parsed = parse_expression(&lexed, &arena);
     f(parsed)
 }
 
@@ -24,8 +23,7 @@ where
     let mut lexed = lex(string);
     remove_whitespace(&mut lexed);
     let arena = Arena::new();
-    let mut cache = HashMap::new();
-    let parsed = parse_statement(&lexed, &arena, &mut cache);
+    let parsed = parse_statement(&lexed, &arena);
     f(parsed)
 }
 
@@ -37,23 +35,21 @@ where
     let mut lexed = lex(string);
     remove_whitespace(&mut lexed);
     let arena = Arena::new();
-    let mut cache = HashMap::new();
-    let parsed = parse_module(&lexed, module_id, &arena, &mut cache);
+    let parsed = parse_module(&lexed, module_id, &arena);
     f(parsed)
 }
 
 pub fn with_specific_parsed<G, F>(string: &'static str, g: G, f: F)
 where
     F: FnOnce(Result),
-    G: for<'parse> Fn(&'parse [Token<'parse>], Arena<'parse>, &mut ParseCache<'parse>)
+    G: for<'parse> Fn(&'parse [Token<'parse>], Arena<'parse>)
         -> Result<'parse>,
 {
     let mut lexed = lex(string);
     remove_whitespace(&mut lexed);
     let arena = ::typed_arena::Arena::new();
-    let mut cache = HashMap::new();
     {
-        let parsed = g(&lexed, &arena, &mut cache);
+        let parsed = g(&lexed, &arena);
         f(parsed)
     }
 }

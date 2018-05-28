@@ -3,7 +3,6 @@ use *;
 fn parse_function_call_right<'parse>(
     tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
-    cache: &mut ParseCache<'parse>,
     lower: Parser,
     prev: &'parse Ast<'parse>,
 ) -> Result<'parse> {
@@ -24,7 +23,7 @@ fn parse_function_call_right<'parse>(
                 args.push(ArgumentSyntax::Underscore);
                 tokens
             } else {
-                let (expr, tokens) = parse_expression(tokens_u, arena, cache)?;
+                let (expr, tokens) = parse_expression(tokens_u, arena)?;
                 args.push(ArgumentSyntax::Expression(expr));
                 tokens
             };
@@ -50,17 +49,16 @@ fn parse_function_call_right<'parse>(
         args: args,
     });
 
-    parse_function_call_right(tokens_u, arena, cache, lower, current)
+    parse_function_call_right(tokens_u, arena, lower, current)
 }
 
 pub fn parse_function_call<'parse>(
     tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
-    cache: &mut ParseCache<'parse>,
     lower: Parser,
 ) -> Result<'parse> {
-    let (left, tokens) = lower(tokens, arena, cache)?;
-    parse_function_call_right(tokens, arena, cache, lower, left)
+    let (left, tokens) = lower(tokens, arena)?;
+    parse_function_call_right(tokens, arena, lower, left)
 }
 
 #[test]

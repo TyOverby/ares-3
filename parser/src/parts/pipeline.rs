@@ -3,7 +3,6 @@ use *;
 fn parse_pipeline_right<'parse>(
     tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
-    cache: &mut ParseCache<'parse>,
     lower: Parser,
     prev: &'parse Ast<'parse>,
 ) -> Result<'parse> {
@@ -11,11 +10,10 @@ fn parse_pipeline_right<'parse>(
         Ok((_, tokens)) => tokens,
         Err(_) => return Ok((prev, tokens)),
     };
-    let (right, tokens) = lower(tokens, arena, cache)?;
+    let (right, tokens) = lower(tokens, arena)?;
     parse_pipeline_right(
         tokens,
         arena,
-        cache,
         lower,
         arena.alloc(Ast::Pipeline(prev, right)),
     )
@@ -24,11 +22,10 @@ fn parse_pipeline_right<'parse>(
 pub fn parse_pipeline<'parse>(
     tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
-    cache: &mut ParseCache<'parse>,
     lower: Parser,
 ) -> Result<'parse> {
-    let (left, tokens) = lower(tokens, arena, cache)?;
-    parse_pipeline_right(tokens, arena, cache, lower, left)
+    let (left, tokens) = lower(tokens, arena)?;
+    parse_pipeline_right(tokens, arena, lower, left)
 }
 
 #[test]

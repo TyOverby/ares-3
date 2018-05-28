@@ -3,7 +3,6 @@ use *;
 pub fn parse_anon_func<'parse>(
     tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
-    cache: &mut ParseCache<'parse>,
 ) -> Result<'parse> {
     let (_, tokens) = expect_token_type!(tokens, TokenKind::OpenParen, "open parenthesis")?;
     let (params, tokens) = if let Ok((_, tokens)) =
@@ -11,11 +10,11 @@ pub fn parse_anon_func<'parse>(
     {
         (vec![], tokens)
     } else {
-        parse_arg_list(tokens, arena, cache)?
+        parse_arg_list(tokens, arena)?
     };
 
     let (_, tokens) = expect_token_type!(tokens, TokenKind::WideArrow, "=>")?;
-    let (body, tokens) = parse_expression(tokens, arena, cache)?;
+    let (body, tokens) = parse_expression(tokens, arena)?;
 
     Ok((arena.alloc(Ast::AnonFunc { params, body }) as &_, tokens))
 }

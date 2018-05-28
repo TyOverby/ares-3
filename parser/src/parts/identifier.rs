@@ -3,7 +3,6 @@ use ::*;
 pub fn parse_identifier<'parse>(
     tokens: &'parse [Token<'parse>],
     arena: Arena<'parse>,
-    _cache: &mut ParseCache<'parse>,
 ) -> Result<'parse> {
     let (ident, tokens) = expect_token_type!(tokens, TokenKind::Identifier(_), "identifier")?;
     let s = if let &Token {

@@ -1,15 +1,14 @@
-use ::*;
+use *;
 
 pub fn parse_module<'parse>(
     mut tokens: &'parse [Token<'parse>],
     module_id: &'parse str,
     arena: Arena<'parse>,
-    cache: &mut ParseCache<'parse>,
 ) -> Result<'parse> {
     let mut statements = vec![];
 
     while !tokens.is_empty() {
-        let (statement, tokens_n) = parse_statement(tokens, arena, cache)?;
+        let (statement, tokens_n) = parse_statement(tokens, arena)?;
         tokens = tokens_n;
         statements.push(statement);
     }
@@ -22,7 +21,6 @@ pub fn parse_module<'parse>(
         tokens,
     ));
 }
-
 
 #[test]
 fn single_function_call_statement_module() {
