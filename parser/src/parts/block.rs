@@ -1,14 +1,14 @@
 use *;
 
-pub fn parse_block_expression<'parse>(
-    tokens: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
-) -> Result<'parse> {
+pub fn parse_block_expression<'a>(
+    tokens: &'a [Token<'a>],
+    alloc: &mut Allocator<'a>,
+) -> Result<'a> {
     let (_, mut tokens) = expect_token_type!(tokens, TokenKind::OpenBrace, "'{' open brace")?;
 
     let mut statements = vec![];
     loop {
-        if let Ok((statement, tokens_n)) = parse_statement(tokens, arena) {
+        if let Ok((statement, tokens_n)) = parse_statement(tokens, alloc) {
             tokens = tokens_n;
             statements.push(statement);
         } else {
@@ -16,11 +16,12 @@ pub fn parse_block_expression<'parse>(
         }
     }
 
-    let (expr, tokens) = parse_expression(tokens, arena)?;
+    let (expr, tokens) = parse_expression(tokens, alloc)?;
     let (_, tokens) = expect_token_type!(tokens, TokenKind::CloseBrace, "'}' close brace")?;
+    let statements = alloc.alloc_iter(statements);
     return Ok((
-        arena.alloc(Ast::BlockExpr {
-            statements: statements,
+        alloc.alloc(Ast::BlockExpr {
+            statements,
             final_expression: expr,
         }),
         tokens,

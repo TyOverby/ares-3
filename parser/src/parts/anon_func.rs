@@ -1,22 +1,19 @@
 use *;
 
-pub fn parse_anon_func<'parse>(
-    tokens: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
-) -> Result<'parse> {
+pub fn parse_anon_func<'a>(tokens: &'a [Token<'a>], alloc: &mut Allocator<'a>) -> Result<'a> {
     let (_, tokens) = expect_token_type!(tokens, TokenKind::OpenParen, "open parenthesis")?;
     let (params, tokens) = if let Ok((_, tokens)) =
         expect_token_type!(tokens, TokenKind::CloseParen, "close parenthesis")
     {
-        (vec![], tokens)
+        (&[] as &[_], tokens)
     } else {
-        parse_arg_list(tokens, arena)?
+        parse_arg_list(tokens, alloc)?
     };
 
     let (_, tokens) = expect_token_type!(tokens, TokenKind::WideArrow, "=>")?;
-    let (body, tokens) = parse_expression(tokens, arena)?;
+    let (body, tokens) = parse_expression(tokens, alloc)?;
 
-    Ok((arena.alloc(Ast::AnonFunc { params, body }) as &_, tokens))
+    Ok((alloc.alloc(Ast::AnonFunc { params, body }) as &_, tokens))
 }
 
 #[test]

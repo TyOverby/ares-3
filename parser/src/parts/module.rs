@@ -1,20 +1,21 @@
 use *;
 
-pub fn parse_module<'parse>(
-    mut tokens: &'parse [Token<'parse>],
-    module_id: &'parse str,
-    arena: Arena<'parse>,
-) -> Result<'parse> {
+pub fn parse_module<'a>(
+    mut tokens: &'a [Token<'a>],
+    module_id: &'a str,
+    alloc: &mut Allocator<'a>,
+) -> Result<'a> {
     let mut statements = vec![];
 
     while !tokens.is_empty() {
-        let (statement, tokens_n) = parse_statement(tokens, arena)?;
+        let (statement, tokens_n) = parse_statement(tokens, alloc)?;
         tokens = tokens_n;
         statements.push(statement);
     }
 
+    let statements = alloc.alloc_iter(statements);
     return Ok((
-        arena.alloc(Ast::Module {
+        alloc.alloc(Ast::Module {
             statements,
             module_id,
         }),

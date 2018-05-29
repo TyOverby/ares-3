@@ -1,11 +1,11 @@
 use *;
 
-fn parse_function_call_right<'parse>(
-    tokens: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
-    lower: Parser,
-    prev: AstPtr<'parse>,
-) -> Result<'parse> {
+fn parse_function_call_right<'a>(
+    tokens: &'a [Token<'a>],
+    alloc: &mut Allocator<'a>,
+    lower: &impl Fn(&'a [Token<'a>], &mut Allocator<'a>) -> Result<'a>,
+    prev: AstPtr<'a>,
+) -> Result<'a> {
     let mut tokens_u = match expect_token_type!(tokens, TokenKind::OpenParen, "open paren") {
         Ok((_, tokens)) => tokens,
         Err(_) => return Ok((prev, tokens)),
@@ -23,7 +23,7 @@ fn parse_function_call_right<'parse>(
                 args.push(ArgumentSyntax::Underscore);
                 tokens
             } else {
-                let (expr, tokens) = parse_expression(tokens_u, arena)?;
+                let (expr, tokens) = parse_expression(tokens_u, alloc)?;
                 args.push(ArgumentSyntax::Expression(expr));
                 tokens
             };
@@ -43,20 +43,17 @@ fn parse_function_call_right<'parse>(
             }
         }
     }
+    let args = alloc.alloc_iter(args);
+    let current = alloc.alloc(Ast::FunctionCall { target: prev, args });
 
-    let current = arena.alloc(Ast::FunctionCall {
-        target: prev,
-        args: args,
-    });
-
-    parse_function_call_right(tokens_u, arena, lower, current)
+    parse_function_call_right(tokens_u, alloc, lower, current)
 }
 
-pub fn parse_function_call<'parse>(
-    tokens: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
-    lower: Parser,
-) -> Result<'parse> {
+pub fn parse_function_call<'a>(
+    tokens: &'a [Token<'a>],
+    arena: &mut Allocator<'a>,
+    lower: &impl Fn(&'a [Token<'a>], &mut Allocator<'a>) -> Result<'a>,
+) -> Result<'a> {
     let (left, tokens) = lower(tokens, arena)?;
     parse_function_call_right(tokens, arena, lower, left)
 }

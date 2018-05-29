@@ -1,9 +1,6 @@
-use ::*;
+use *;
 
-pub fn parse_identifier<'parse>(
-    tokens: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
-) -> Result<'parse> {
+pub fn parse_identifier<'a>(tokens: &'a [Token<'a>], arena: &mut Allocator<'a>) -> Result<'a> {
     let (ident, tokens) = expect_token_type!(tokens, TokenKind::Identifier(_), "identifier")?;
     let s = if let &Token {
         kind: TokenKind::Identifier(s),

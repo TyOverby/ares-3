@@ -1,31 +1,27 @@
 use *;
 
-fn parse_pipeline_right<'parse>(
-    tokens: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
-    lower: Parser,
-    prev: AstPtr<'parse>,
-) -> Result<'parse> {
+fn parse_pipeline_right<'a>(
+    tokens: &'a [Token<'a>],
+    arena: &mut Allocator<'a>,
+    lower: &impl Fn(&'a [Token<'a>], &mut Allocator<'a>) -> Result<'a>,
+    prev: AstPtr<'a>,
+) -> Result<'a> {
     let tokens = match expect_token_type!(tokens, TokenKind::Pipeline, "|> (pipeline)") {
         Ok((_, tokens)) => tokens,
         Err(_) => return Ok((prev, tokens)),
     };
     let (right, tokens) = lower(tokens, arena)?;
-    parse_pipeline_right(
-        tokens,
-        arena,
-        lower,
-        arena.alloc(Ast::Pipeline(prev, right)),
-    )
+    let prev = arena.alloc(Ast::Pipeline(prev, right));
+    parse_pipeline_right(tokens, arena, lower, prev)
 }
 
-pub fn parse_pipeline<'parse>(
-    tokens: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
-    lower: Parser,
-) -> Result<'parse> {
-    let (left, tokens) = lower(tokens, arena)?;
-    parse_pipeline_right(tokens, arena, lower, left)
+pub fn parse_pipeline<'a>(
+    tokens: &'a [Token<'a>],
+    alloc: &mut Allocator<'a>,
+    lower: &impl Fn(&'a [Token<'a>], &mut Allocator<'a>) -> Result<'a>,
+) -> Result<'a> {
+    let (left, tokens) = lower(tokens, alloc)?;
+    parse_pipeline_right(tokens, alloc, lower, left)
 }
 
 #[test]

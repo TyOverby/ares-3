@@ -1,15 +1,15 @@
 use *;
 
-pub fn parse_arg_list<'parse>(
-    mut tokens_u: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
+pub fn parse_arg_list<'a>(
+    mut tokens_u: &'a [Token<'a>],
+    alloc: &mut Allocator<'a>,
 ) -> std::result::Result<
-    (Vec<(&'parse str, AstPtr<'parse>)>, &'parse [Token<'parse>]),
-    (ParseError<'parse>, &'parse [Token<'parse>]),
+    (&'a [(&'a str, AstPtr<'a>)], &'a [Token<'a>]),
+    (ParseError<'a>, &'a [Token<'a>]),
 > {
     let mut params = vec![];
     loop {
-        let (param, tokens) = parse_identifier(tokens_u, arena)?;
+        let (param, tokens) = parse_identifier(tokens_u, alloc)?;
         if let &Ast::Identifier(_, s) = param {
             params.push((s, param));
         } else {
@@ -30,19 +30,19 @@ pub fn parse_arg_list<'parse>(
             break;
         }
     }
-    return Ok((params, tokens_u));
+    return Ok((alloc.alloc_iter(params), tokens_u));
 }
 
-fn parse_function_params<'parse>(
-    tokens: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
-    name: &'parse str,
-    name_ast: AstPtr<'parse>,
-) -> Result<'parse> {
+fn parse_function_params<'a>(
+    tokens: &'a [Token<'a>],
+    arena: &mut Allocator<'a>,
+    name: &'a str,
+    name_ast: AstPtr<'a>,
+) -> Result<'a> {
     let (params, tokens) = if let Ok((_, tokens)) =
         expect_token_type!(tokens, TokenKind::CloseParen, "close parenthesis")
     {
-        (vec![], tokens)
+        (&[] as &[_], tokens)
     } else {
         parse_arg_list(tokens, arena)?
     };
@@ -61,10 +61,7 @@ fn parse_function_params<'parse>(
     ))
 }
 
-pub fn parse_let_decl<'parse>(
-    tokens: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
-) -> Result<'parse> {
+pub fn parse_let_decl<'a>(tokens: &'a [Token<'a>], arena: &mut Allocator<'a>) -> Result<'a> {
     let (_, tokens) = expect_token_type!(tokens, TokenKind::Let, "let (keyword)")?;
     let (name, tokens) = parse_identifier(tokens, arena)?;
     let name_s = if let &Ast::Identifier(_, s) = name {

@@ -1,9 +1,6 @@
-use ::*;
+use *;
 
-pub fn parse_parenthesized<'parse>(
-    tokens: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
-) -> Result<'parse> {
+pub fn parse_parenthesized<'a>(tokens: &'a [Token<'a>], arena: &mut Allocator<'a>) -> Result<'a> {
     let (_, tokens) = expect_token_type!(tokens, TokenKind::OpenParen, "open parenthesis")?;
     let (expr, tokens) = parse_expression(tokens, arena)?;
     let (_, tokens) = expect_token_type!(tokens, TokenKind::CloseParen, "close parenthesis")?;

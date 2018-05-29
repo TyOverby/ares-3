@@ -1,45 +1,45 @@
 use lexer::TokenKind;
 use *;
 
-pub fn parse_additive<'parse>(
-    tokens: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
-    lower: Parser,
-) -> Result<'parse> {
-    let (left, tokens) = lower(tokens, arena)?;
-    let rest: Result<'parse> = (|| {
+pub fn parse_additive<'a>(
+    tokens: &'a [Token<'a>],
+    alloc: &mut Allocator<'a>,
+    lower: &impl Fn(&'a [Token<'a>], &mut Allocator<'a>) -> Result<'a>,
+) -> Result<'a> {
+    let (left, tokens) = lower(tokens, alloc)?;
+    let rest: Result<'a> = (|| {
         let (op, tokens) = expect_token_type!(
             tokens,
             TokenKind::Plus | TokenKind::Minus,
             "+ or - (add or subtract)"
         )?;
-        let (right, tokens) = me_or_fallback!(parse_additive, lower, (tokens, arena))?;
+        let (right, tokens) = me_or_fallback!(parse_additive, lower, (tokens, alloc))?;
         if op.kind == TokenKind::Plus {
-            Ok((arena.alloc(Ast::Add(left, right)) as &_, tokens))
+            Ok((alloc.alloc(Ast::Add(left, right)) as &_, tokens))
         } else {
-            Ok((arena.alloc(Ast::Sub(left, right)) as &_, tokens))
+            Ok((alloc.alloc(Ast::Sub(left, right)) as &_, tokens))
         }
     })();
     rest.or(Ok((left, tokens)))
 }
 
-pub fn parse_multiplicative<'parse>(
-    tokens: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
-    lower: Parser,
-) -> Result<'parse> {
-    let (left, tokens) = lower(tokens, arena)?;
-    let rest: Result<'parse> = (|| {
+pub fn parse_multiplicative<'a>(
+    tokens: &'a [Token<'a>],
+    alloc: &mut Allocator<'a>,
+    lower: &impl Fn(&'a [Token<'a>], &mut Allocator<'a>) -> Result<'a>,
+) -> Result<'a> {
+    let (left, tokens) = lower(tokens, alloc)?;
+    let rest: Result<'a> = (|| {
         let (op, tokens) = expect_token_type!(
             tokens,
             TokenKind::Mul | TokenKind::Div,
             "* or / (multiply or divide)"
         )?;
-        let (right, tokens) = me_or_fallback!(parse_multiplicative, lower, (tokens, arena))?;
+        let (right, tokens) = me_or_fallback!(parse_multiplicative, lower, (tokens, alloc))?;
         if op.kind == TokenKind::Mul {
-            Ok((arena.alloc(Ast::Mul(left, right)) as &_, tokens))
+            Ok((alloc.alloc(Ast::Mul(left, right)) as &_, tokens))
         } else {
-            Ok((arena.alloc(Ast::Div(left, right)) as &_, tokens))
+            Ok((alloc.alloc(Ast::Div(left, right)) as &_, tokens))
         }
     })();
     rest.or(Ok((left, tokens)))

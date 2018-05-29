@@ -1,9 +1,6 @@
 use *;
 
-pub fn parse_debug_call<'parse>(
-    tokens: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
-) -> Result<'parse> {
+pub fn parse_debug_call<'a>(tokens: &'a [Token<'a>], arena: &mut Allocator<'a>) -> Result<'a> {
     let (_, tokens) = expect_token_type!(tokens, TokenKind::DebugKeyword, "debug keyword")?;
     let (_, tokens) = expect_token_type!(tokens, TokenKind::OpenParen, "open parenthesis")?;
     let (value, tokens) = parse_expression(tokens, arena)?;

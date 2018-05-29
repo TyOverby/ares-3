@@ -4,14 +4,14 @@ extern crate regex;
 use copy_arena::{Allocator, Arena};
 use regex::Regex;
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Token<'a> {
     pub kind: TokenKind<'a>,
     pub start_byte: usize,
     pub end_byte: usize,
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum TokenKind<'a> {
     DebugKeyword,
     OpenParen,
@@ -39,19 +39,25 @@ pub enum TokenKind<'a> {
     Error(&'a str),
 }
 
-pub fn remove_whitespace(tokens: &mut Vec<Token>) {
-    tokens.retain(|token| {
+pub fn remove_whitespace<'a>(
+    tokens: &'a [Token<'a>],
+    alloc: &mut Allocator<'a>,
+) -> &'a [Token<'a>] {
+    let mut v = tokens.iter().cloned().collect::<Vec<_>>();
+    v.retain(|token| {
         if let TokenKind::Whitespace(_) = token.kind {
             false
         } else {
             true
         }
-    })
+    });
+
+    alloc.alloc_iter(v)
 }
 
 type Table<'i, 'a> = Vec<(Regex, Box<Fn(&'i str, &mut Allocator<'a>) -> TokenKind<'a>>)>;
 
-pub fn lex<'i, 'a>(input: &'i str, mut alloc: Allocator<'a>) -> Vec<Token<'a>> {
+pub fn lex<'i, 'a>(input: &'i str, alloc: &mut Allocator<'a>) -> &'a [Token<'a>] {
     let table: Vec<(
         &'static str,
         Box<Fn(&'i str, &mut Allocator<'a>) -> TokenKind<'a>>,
@@ -134,106 +140,90 @@ pub fn lex<'i, 'a>(input: &'i str, mut alloc: Allocator<'a>) -> Vec<Token<'a>> {
     let mut offset = 0;
     let mut out = vec![];
     loop {
-        if let Some(token) = lex_one(&input[offset..], offset, &processed, &mut alloc) {
+        if let Some(token) = lex_one(&input[offset..], offset, &processed, alloc) {
             offset = token.end_byte;
             out.push(token);
         } else {
             break;
         }
     }
-    return out;
+    alloc.alloc_iter(out)
 }
 
 #[test]
 fn lex_parens() {
     let mut arena = Arena::new();
-    {
-        let alloc = arena.allocator();
-        assert_eq!(
-            lex("(", alloc),
-            vec![Token {
-                kind: TokenKind::OpenParen,
-                start_byte: 0,
-                end_byte: 1,
-            }]
-        );
-    }
+    let mut alloc = arena.allocator();
+    assert_eq!(
+        lex("(", &mut alloc),
+        &[Token {
+            kind: TokenKind::OpenParen,
+            start_byte: 0,
+            end_byte: 1,
+        }]
+    );
 
-    {
-        let alloc = arena.allocator();
-        assert_eq!(
-            lex(")", alloc),
-            vec![Token {
-                kind: TokenKind::CloseParen,
-                start_byte: 0,
-                end_byte: 1,
-            }]
-        );
-    }
+    assert_eq!(
+        lex(")", &mut alloc),
+        &[Token {
+            kind: TokenKind::CloseParen,
+            start_byte: 0,
+            end_byte: 1,
+        }]
+    );
 }
 
 #[test]
 fn lex_bracket() {
     let mut arena = Arena::new();
-    {
-        let alloc = arena.allocator();
-        assert_eq!(
-            lex("[", alloc),
-            vec![Token {
-                kind: TokenKind::OpenBracket,
-                start_byte: 0,
-                end_byte: 1,
-            }]
-        );
-    }
-
-    {
-        let alloc = arena.allocator();
-        assert_eq!(
-            lex("]", alloc),
-            vec![Token {
-                kind: TokenKind::CloseBracket,
-                start_byte: 0,
-                end_byte: 1,
-            }]
-        );
-    }
+    let mut alloc = arena.allocator();
+    assert_eq!(
+        lex("[", &mut alloc),
+        &[Token {
+            kind: TokenKind::OpenBracket,
+            start_byte: 0,
+            end_byte: 1,
+        }]
+    );
+    assert_eq!(
+        lex("]", &mut alloc),
+        &[Token {
+            kind: TokenKind::CloseBracket,
+            start_byte: 0,
+            end_byte: 1,
+        }]
+    );
 }
 
 #[test]
 fn lex_brace() {
     let mut arena = Arena::new();
-    {
-        let alloc = arena.allocator();
-        assert_eq!(
-            lex("{", alloc),
-            vec![Token {
-                kind: TokenKind::OpenBrace,
-                start_byte: 0,
-                end_byte: 1,
-            }]
-        );
-    }
-    {
-        let alloc = arena.allocator();
-        assert_eq!(
-            lex("}", alloc),
-            vec![Token {
-                kind: TokenKind::CloseBrace,
-                start_byte: 0,
-                end_byte: 1,
-            }]
-        );
-    }
+    let mut alloc = arena.allocator();
+    assert_eq!(
+        lex("{", &mut alloc),
+        &[Token {
+            kind: TokenKind::OpenBrace,
+            start_byte: 0,
+            end_byte: 1,
+        }]
+    );
+    assert_eq!(
+        lex("}", &mut alloc),
+        &[Token {
+            kind: TokenKind::CloseBrace,
+            start_byte: 0,
+            end_byte: 1,
+        }]
+    );
 }
 
 #[test]
 fn lex_integers() {
     let mut arena = Arena::new();
-    let alloc = arena.allocator();
+    let mut alloc = arena.allocator();
     assert_eq!(
-        lex("123", alloc),
-        vec![Token {
+        lex("123", &mut alloc),
+        &[Token {
             kind: TokenKind::Integer(123),
             start_byte: 0,
             end_byte: 3,
@@ -244,10 +234,10 @@ fn lex_integers() {
 #[test]
 fn lex_float() {
     let mut arena = Arena::new();
-    let alloc = arena.allocator();
+    let mut alloc = arena.allocator();
     assert_eq!(
-        lex("1.2", alloc),
-        vec![Token {
+        lex("1.2", &mut alloc),
+        &[Token {
             kind: TokenKind::Float(1.2),
             start_byte: 0,
             end_byte: 3,
@@ -258,10 +248,10 @@ fn lex_float() {
 #[test]
 fn lex_whitespace() {
     let mut arena = Arena::new();
-    let alloc = arena.allocator();
+    let mut alloc = arena.allocator();
     assert_eq!(
-        lex(" \n\t", alloc),
-        vec![Token {
+        lex(" \n\t", &mut alloc),
+        &[Token {
             kind: TokenKind::Whitespace(" \n\t"),
             start_byte: 0,
             end_byte: 3,
@@ -272,10 +262,10 @@ fn lex_whitespace() {
 #[test]
 fn lex_error() {
     let mut arena = Arena::new();
-    let alloc = arena.allocator();
+    let mut alloc = arena.allocator();
     assert_eq!(
-        lex("ø", alloc),
-        vec![Token {
+        lex("ø", &mut alloc),
+        &[Token {
             kind: TokenKind::Error("ø"),
             start_byte: 0,
             end_byte: 2,
@@ -286,48 +276,40 @@ fn lex_error() {
 #[test]
 fn lex_punctuation() {
     let mut arena = Arena::new();
-    {
-        let alloc = arena.allocator();
-        assert_eq!(
-            lex(".", alloc),
-            vec![Token {
-                kind: TokenKind::Dot,
-                start_byte: 0,
-                end_byte: 1,
-            }]
-        );
-    }
-    {
-        let alloc = arena.allocator();
-        assert_eq!(
-            lex(";", alloc),
-            vec![Token {
-                kind: TokenKind::Semicolon,
-                start_byte: 0,
-                end_byte: 1,
-            }]
-        );
-    }
-    {
-        let alloc = arena.allocator();
-        assert_eq!(
-            lex(",", alloc),
-            vec![Token {
-                kind: TokenKind::Comma,
-                start_byte: 0,
-                end_byte: 1,
-            }]
-        );
-    }
+    let mut alloc = arena.allocator();
+    assert_eq!(
+        lex(".", &mut alloc),
+        &[Token {
+            kind: TokenKind::Dot,
+            start_byte: 0,
+            end_byte: 1,
+        }]
+    );
+    assert_eq!(
+        lex(";", &mut alloc),
+        &[Token {
+            kind: TokenKind::Semicolon,
+            start_byte: 0,
+            end_byte: 1,
+        }]
+    );
+    assert_eq!(
+        lex(",", &mut alloc),
+        &[Token {
+            kind: TokenKind::Comma,
+            start_byte: 0,
+            end_byte: 1,
+        }]
+    );
 }
 
 #[test]
 fn lex_pipeline() {
     let mut arena = Arena::new();
-    let alloc = arena.allocator();
+    let mut alloc = arena.allocator();
     assert_eq!(
-        lex("|>", alloc),
-        vec![Token {
+        lex("|>", &mut alloc),
+        &[Token {
             kind: TokenKind::Pipeline,
             start_byte: 0,
             end_byte: 2,
@@ -338,10 +320,10 @@ fn lex_pipeline() {
 #[test]
 fn lex_let_with_spaces() {
     let mut arena = Arena::new();
-    let alloc = arena.allocator();
+    let mut alloc = arena.allocator();
     assert_eq!(
-        lex("let ", alloc),
-        vec![
+        lex("let ", &mut alloc),
+        &[
             Token {
                 kind: TokenKind::Let,
                 start_byte: 0,
@@ -359,10 +341,10 @@ fn lex_let_with_spaces() {
 #[test]
 fn lex_debug_keyword() {
     let mut arena = Arena::new();
-    let alloc = arena.allocator();
+    let mut alloc = arena.allocator();
     assert_eq!(
-        lex("debug", alloc),
-        vec![Token {
+        lex("debug", &mut alloc),
+        &[Token {
             kind: TokenKind::DebugKeyword,
             start_byte: 0,
             end_byte: 5,
@@ -373,10 +355,10 @@ fn lex_debug_keyword() {
 #[test]
 fn lex_equal() {
     let mut arena = Arena::new();
-    let alloc = arena.allocator();
+    let mut alloc = arena.allocator();
     assert_eq!(
-        lex("=", alloc),
-        vec![Token {
+        lex("=", &mut alloc),
+        &[Token {
             kind: TokenKind::Equal,
             start_byte: 0,
             end_byte: 1,
@@ -387,10 +369,10 @@ fn lex_equal() {
 #[test]
 fn lex_wide_arrow() {
     let mut arena = Arena::new();
-    let alloc = arena.allocator();
+    let mut alloc = arena.allocator();
     assert_eq!(
-        lex("=>", alloc),
-        vec![Token {
+        lex("=>", &mut alloc),
+        &[Token {
             kind: TokenKind::WideArrow,
             start_byte: 0,
             end_byte: 2,
@@ -401,10 +383,10 @@ fn lex_wide_arrow() {
 #[test]
 fn lex_debug_keyword_with_spaces() {
     let mut arena = Arena::new();
-    let alloc = arena.allocator();
+    let mut alloc = arena.allocator();
     assert_eq!(
-        lex("debug ", alloc),
-        vec![
+        lex("debug ", &mut alloc),
+        &[
             Token {
                 kind: TokenKind::DebugKeyword,
                 start_byte: 0,
@@ -422,10 +404,10 @@ fn lex_debug_keyword_with_spaces() {
 #[test]
 fn lex_let() {
     let mut arena = Arena::new();
-    let alloc = arena.allocator();
+    let mut alloc = arena.allocator();
     assert_eq!(
-        lex("let", alloc),
-        vec![Token {
+        lex("let", &mut alloc),
+        &[Token {
             kind: TokenKind::Let,
             start_byte: 0,
             end_byte: 3,
@@ -436,10 +418,10 @@ fn lex_let() {
 #[test]
 fn identifier_that_starts_with_let() {
     let mut arena = Arena::new();
-    let alloc = arena.allocator();
+    let mut alloc = arena.allocator();
     assert_eq!(
-        lex("letx", alloc),
-        vec![Token {
+        lex("letx", &mut alloc),
+        &[Token {
             kind: TokenKind::Identifier("letx"),
             start_byte: 0,
             end_byte: 4,
@@ -450,10 +432,10 @@ fn identifier_that_starts_with_let() {
 #[test]
 fn lex_identifier() {
     let mut arena = Arena::new();
-    let alloc = arena.allocator();
+    let mut alloc = arena.allocator();
     assert_eq!(
-        lex("abc", alloc),
-        vec![Token {
+        lex("abc", &mut alloc),
+        &[Token {
             kind: TokenKind::Identifier("abc"),
             start_byte: 0,
             end_byte: 3,
@@ -464,10 +446,10 @@ fn lex_identifier() {
 #[test]
 fn lex_identifier_that_starts_with_underscore() {
     let mut arena = Arena::new();
-    let alloc = arena.allocator();
+    let mut alloc = arena.allocator();
     assert_eq!(
-        lex("_abc", alloc),
-        vec![Token {
+        lex("_abc", &mut alloc),
+        &[Token {
             kind: TokenKind::Identifier("_abc"),
             start_byte: 0,
             end_byte: 4,
@@ -478,10 +460,10 @@ fn lex_identifier_that_starts_with_underscore() {
 #[test]
 fn lex_underscore() {
     let mut arena = Arena::new();
-    let alloc = arena.allocator();
+    let mut alloc = arena.allocator();
     assert_eq!(
-        lex("_", alloc),
-        vec![Token {
+        lex("_", &mut alloc),
+        &[Token {
             kind: TokenKind::Underscore,
             start_byte: 0,
             end_byte: 1,
@@ -492,10 +474,10 @@ fn lex_underscore() {
 #[test]
 fn lex_identifier_with_numbers() {
     let mut arena = Arena::new();
-    let alloc = arena.allocator();
+    let mut alloc = arena.allocator();
     assert_eq!(
-        lex("abc1", alloc),
-        vec![Token {
+        lex("abc1", &mut alloc),
+        &[Token {
             kind: TokenKind::Identifier("abc1"),
             start_byte: 0,
             end_byte: 4,
@@ -506,59 +488,48 @@ fn lex_identifier_with_numbers() {
 #[test]
 fn lex_math() {
     let mut arena = Arena::new();
-    {
-        let alloc = arena.allocator();
-        assert_eq!(
-            lex("+", alloc),
-            vec![Token {
-                kind: TokenKind::Plus,
-                start_byte: 0,
-                end_byte: 1,
-            }]
-        );
-    }
-    {
-        let alloc = arena.allocator();
-        assert_eq!(
-            lex("-", alloc),
-            vec![Token {
-                kind: TokenKind::Minus,
-                start_byte: 0,
-                end_byte: 1,
-            }]
-        );
-    }
-    {
-        let alloc = arena.allocator();
-        assert_eq!(
-            lex("/", alloc),
-            vec![Token {
-                kind: TokenKind::Div,
-                start_byte: 0,
-                end_byte: 1,
-            }]
-        );
-    }
-    {
-        let alloc = arena.allocator();
-        assert_eq!(
-            lex("*", alloc),
-            vec![Token {
-                kind: TokenKind::Mul,
-                start_byte: 0,
-                end_byte: 1,
-            }]
-        );
-    }
+    let mut alloc = arena.allocator();
+    assert_eq!(
+        lex("+", &mut alloc),
+        &[Token {
+            kind: TokenKind::Plus,
+            start_byte: 0,
+            end_byte: 1,
+        }]
+    );
+    assert_eq!(
+        lex("-", &mut alloc),
+        &[Token {
+            kind: TokenKind::Minus,
+            start_byte: 0,
+            end_byte: 1,
+        }]
+    );
+    assert_eq!(
+        lex("/", &mut alloc),
+        &[Token {
+            kind: TokenKind::Div,
+            start_byte: 0,
+            end_byte: 1,
+        }]
+    );
+    assert_eq!(
+        lex("*", &mut alloc),
+        &[Token {
+            kind: TokenKind::Mul,
+            start_byte: 0,
+            end_byte: 1,
+        }]
+    );
 }
 
 #[test]
 fn lex_multiple() {
     let mut arena = Arena::new();
-    let alloc = arena.allocator();
+    let mut alloc = arena.allocator();
     assert_eq!(
-        lex("([{", alloc),
-        vec![
+        lex("([{", &mut alloc),
+        &[
             Token {
                 kind: TokenKind::OpenParen,
                 start_byte: 0,

@@ -2,13 +2,13 @@ use ::*;
 
 pub fn parse_number<'parse>(
     tokens: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
+    alloc: &mut Allocator<'parse>,
 ) -> Result<'parse> {
     let (ident, tokens) =
         expect_token_type!(tokens, TokenKind::Integer(_) | TokenKind::Float(_), "number")?;
     match ident.kind {
-        TokenKind::Integer(i) => Ok((arena.alloc(Ast::Integer(ident, i)), tokens)),
-        TokenKind::Float(f) => Ok((arena.alloc(Ast::Float(ident, f)), tokens)),
+        TokenKind::Integer(i) => Ok((alloc.alloc(Ast::Integer(ident, i)), tokens)),
+        TokenKind::Float(f) => Ok((alloc.alloc(Ast::Float(ident, f)), tokens)),
         _ => unreachable!(),
     }
 }

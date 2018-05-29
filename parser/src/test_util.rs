@@ -7,23 +7,25 @@ pub fn with_parsed_expression<'parse, F>(string: &'static str, f: F)
 where
     F: FnOnce(Result),
 {
-    use typed_arena::Arena;
-    let mut lexed = lex(string);
-    remove_whitespace(&mut lexed);
-    let arena = Arena::new();
-    let parsed = parse_expression(&lexed, &arena);
+    let mut arena = copy_arena::Arena::new();
+    let mut alloc = arena.allocator();
+
+    let lexed = lex(string, &mut alloc);
+    let lexed = remove_whitespace(&lexed, &mut alloc);
+    let parsed = parse_expression(&lexed, &mut alloc);
     f(parsed)
 }
 
-pub fn with_parsed_statement<'parse, F>(string: &'static str, f: F)
+pub fn with_parsed_statement<'a, F>(string: &'static str, f: F)
 where
     F: FnOnce(Result),
 {
-    use typed_arena::Arena;
-    let mut lexed = lex(string);
-    remove_whitespace(&mut lexed);
-    let arena = Arena::new();
-    let parsed = parse_statement(&lexed, &arena);
+    let mut arena = copy_arena::Arena::new();
+    let mut alloc = arena.allocator();
+
+    let lexed = lex(string, &mut alloc);
+    let lexed = remove_whitespace(&lexed, &mut alloc);
+    let parsed = parse_statement(&lexed, &mut alloc);
     f(parsed)
 }
 
@@ -31,25 +33,11 @@ pub fn with_parsed_module<'parse, F>(string: &'static str, module_id: &'static s
 where
     F: FnOnce(Result),
 {
-    use typed_arena::Arena;
-    let mut lexed = lex(string);
-    remove_whitespace(&mut lexed);
-    let arena = Arena::new();
-    let parsed = parse_module(&lexed, module_id, &arena);
-    f(parsed)
-}
+    let mut arena = copy_arena::Arena::new();
+    let mut alloc = arena.allocator();
 
-pub fn with_specific_parsed<G, F>(string: &'static str, g: G, f: F)
-where
-    F: FnOnce(Result),
-    G: for<'parse> Fn(&'parse [Token<'parse>], Arena<'parse>)
-        -> Result<'parse>,
-{
-    let mut lexed = lex(string);
-    remove_whitespace(&mut lexed);
-    let arena = ::typed_arena::Arena::new();
-    {
-        let parsed = g(&lexed, &arena);
-        f(parsed)
-    }
+    let lexed = lex(string, &mut alloc);
+    let lexed = remove_whitespace(&lexed, &mut alloc);
+    let parsed = parse_module(&lexed, module_id, &mut alloc);
+    f(parsed)
 }

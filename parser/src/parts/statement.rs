@@ -2,7 +2,7 @@ use *;
 
 pub fn parse_expression_statement<'parse>(
     tokens: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
+    arena: &mut Allocator<'parse>,
 ) -> Result<'parse> {
     let (expression, tokens) = parse_expression(tokens, arena)?;
     let (_, tokens) = expect_token_type!(tokens, TokenKind::Semicolon, "; (semicolon)")?;
@@ -11,7 +11,7 @@ pub fn parse_expression_statement<'parse>(
 
 pub fn parse_statement<'parse>(
     tokens: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
+    arena: &mut Allocator<'parse>,
 ) -> Result<'parse> {
     if let Ok(res) = parse_debug_call(tokens, arena) {
         return Ok(res);

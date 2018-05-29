@@ -2,37 +2,34 @@ use *;
 
 fn parse_field_access_right<'parse>(
     tokens: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
+    alloc: &mut Allocator<'parse>,
     prev: AstPtr<'parse>,
 ) -> Result<'parse> {
     let tokens = match expect_token_type!(tokens, TokenKind::Dot, "dot") {
         Ok((_, tokens)) => tokens,
         Err(_) => return Ok((prev, tokens)),
     };
-    let (right, tokens) = parse_identifier(tokens, arena)?;
+    let (right, tokens) = parse_identifier(tokens, alloc)?;
     let name_s = if let &Ast::Identifier(_, s) = right {
         s
     } else {
         unreachable!()
     };
-    parse_field_access_right(
-        tokens,
-        arena,
-        arena.alloc(Ast::FieldAccess {
-            target: prev,
-            field: right,
-            field_name: name_s,
-        }),
-    )
+    let prev = alloc.alloc(Ast::FieldAccess {
+        target: prev,
+        field: right,
+        field_name: name_s,
+    });
+    parse_field_access_right(tokens, alloc, prev)
 }
 
-pub fn parse_field_access<'parse>(
-    tokens: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
-    lower: Parser,
-) -> Result<'parse> {
-    let (left, tokens) = lower(tokens, arena)?;
-    parse_field_access_right(tokens, arena, left)
+pub fn parse_field_access<'a>(
+    tokens: &'a [Token<'a>],
+    alloc: &mut Allocator<'a>,
+    lower: &impl Fn(&'a [Token<'a>], &mut Allocator<'a>) -> Result<'a>,
+) -> Result<'a> {
+    let (left, tokens) = lower(tokens, alloc)?;
+    parse_field_access_right(tokens, alloc, left)
 }
 
 #[test]

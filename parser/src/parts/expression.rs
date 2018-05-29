@@ -1,6 +1,6 @@
 use *;
 
-pub fn parse_base<'parse>(tokens: &'parse [Token<'parse>], arena: Arena<'parse>) -> Result<'parse> {
+pub fn parse_base<'a>(tokens: &'a [Token<'a>], arena: &mut Allocator<'a>) -> Result<'a> {
     if let Ok(res) = parse_identifier(tokens, arena) {
         return Ok(res);
     }
@@ -33,10 +33,7 @@ pub fn parse_base<'parse>(tokens: &'parse [Token<'parse>], arena: Arena<'parse>)
     ));
 }
 
-pub fn parse_expression<'parse>(
-    tokens: &'parse [Token<'parse>],
-    arena: Arena<'parse>,
-) -> Result<'parse> {
+pub fn parse_expression<'a>(tokens: &'a [Token<'a>], alloc: &mut Allocator<'a>) -> Result<'a> {
     let parser = precedence!(
         parse_pipeline,
         parse_additive,
@@ -46,5 +43,5 @@ pub fn parse_expression<'parse>(
         parse_base
     );
 
-    parser(tokens, arena)
+    parser(tokens, alloc)
 }
