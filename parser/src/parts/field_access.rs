@@ -81,9 +81,8 @@ fn nested_function_call() {
                     field_name:  "b",
                     ..
                 },
-                ref args,
+                args: &[],
             },
-            args.len() == 0
         };
     });
 }

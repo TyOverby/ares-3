@@ -24,11 +24,10 @@ fn no_arg_anon_func() {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::AnonFunc{
-                ref params,
+                params: &[],
                 body: &Ast::Integer(_, 5),
                 ..
             },
-            params.len() == 0
         };
     });
 }
@@ -41,12 +40,10 @@ fn one_arg_anon_func() {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::AnonFunc{
-                ref params,
+                params: &[("a", _)],
                 body: &Ast::Integer(_, 5),
                 ..
             },
-            params.len() == 1,
-            matches!(params[0].0, "a")
         };
     });
 }
@@ -59,13 +56,10 @@ fn two_arg_anon_func() {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::AnonFunc{
-                ref params,
+                params: &[("a", _), ("b", _)],
                 body: &Ast::Integer(_, 5),
                 ..
             },
-            params.len() == 2,
-            matches!(params[0].0, "a"),
-            matches!(params[1].0, "b")
         };
     });
 }
@@ -78,17 +72,13 @@ fn nested_anon_func() {
         let (res, _) = res.unwrap();
         matches!{res,
             &Ast::AnonFunc{
-                params: ref pa,
+                params: &[("a", _)],
                 body: &Ast::AnonFunc {
-                    params: ref pb,
+                    params: &[("b", _)],
                     body: &Ast::Integer(_, 5),
                 },
                 ..
-            },
-            pa.len() == 1,
-            pb.len() == 1,
-            matches!(pa[0].0, "a"),
-            matches!(pb[0].0, "b")
+            }
         };
     });
 }

@@ -52,11 +52,9 @@ fn block_with_a_statement_and_then_an_expression() {
         let (res, _) = res.unwrap();
         matches!{ res,
             &Ast::BlockExpr {
-                ref statements,
+                statements: &[&Ast::FunctionCall{..}],
                 final_expression: &Ast::Identifier(_, _)
-            },
-            statements.len() == 1,
-            matches!(statements[0], &Ast::FunctionCall{..})
+            }
         };
     });
 }
@@ -69,12 +67,12 @@ fn block_with_multiple_statements_and_then_an_expression() {
         let (res, _) = res.unwrap();
         matches!{ res,
             &Ast::BlockExpr {
-                ref statements,
+                statements: &[
+                    &Ast::FunctionCall{..},
+                    &Ast::FunctionCall{..},
+                ],
                 final_expression: &Ast::Identifier(_, _)
             },
-            statements.len() == 2,
-            matches!(statements[0], &Ast::FunctionCall{..}),
-            matches!(statements[1], &Ast::FunctionCall{..})
         };
     });
 }

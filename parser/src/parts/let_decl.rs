@@ -99,11 +99,10 @@ fn no_arg_function_decl() {
         matches!{res,
             &Ast::FunctionDecl{
                 name: "abc",
-                ref params,
+                params: &[],
                 body: &Ast::Integer(_, 5),
                 ..
             },
-            params.len() == 0
         };
     });
 }
@@ -117,11 +116,10 @@ fn more_complicated_fn_body() {
         matches!{res,
             &Ast::FunctionDecl{
                 name: "abc",
-                ref params,
+                params: &[],
                 body: &Ast::Add(_, _),
                 ..
-            },
-            params.len() == 0
+            }
         };
     });
 }
@@ -135,12 +133,10 @@ fn fn_body_with_single_param() {
         matches!{res,
             &Ast::FunctionDecl {
                 name: "abc",
-                ref params,
+                params: &[("a", _)],
                 body: &Ast::Integer(_, 10),
                 ..
-            },
-            params.len() == 1,
-            matches!(params[0].0, "a")
+            }
         };
     });
 }
@@ -154,13 +150,10 @@ fn fn_body_with_multiple_params() {
         matches!{res,
             &Ast::FunctionDecl {
                 name: "abc",
-                ref params,
+                params: &[("a", _), ("b", _)],
                 body: &Ast::Add(_, _),
                 ..
-            },
-            params.len() == 2,
-            matches!(params[0].0, "a"),
-            matches!(params[1].0, "b")
+            }
         };
     });
 }

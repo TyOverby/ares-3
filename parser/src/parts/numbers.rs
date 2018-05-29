@@ -1,4 +1,4 @@
-use ::*;
+use *;
 
 pub fn parse_number<'parse>(
     tokens: &'parse [Token<'parse>],

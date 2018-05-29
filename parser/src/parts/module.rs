@@ -38,7 +38,10 @@ fn multiple_function_call_statement_module() {
 
     with_parsed_module("abc(); def();", "module-name", |res| {
         let (res, _) = res.unwrap();
-        matches!(res, &Ast::Module{ref statements, module_id: "module-name"}, statements.len() == 2);
+        matches!(res, &Ast::Module{
+            statements: &[_, _],
+            module_id: "module-name"
+        });
     });
 }
 
@@ -48,7 +51,10 @@ fn single_let_decl() {
 
     with_parsed_module("let x = 10;", "module-name", |res| {
         let (res, _) = res.unwrap();
-        matches!(res, &Ast::Module{ref statements, module_id: "module-name"}, statements.len() == 1);
+        matches!(res, &Ast::Module {
+            statements: &[_],
+            module_id: "module-name"
+        });
     });
 }
 
@@ -58,6 +64,9 @@ fn multiple_let_decl() {
 
     with_parsed_module("let x = 10; let y = 20;", "module-name", |res| {
         let (res, _) = res.unwrap();
-        matches!(res, &Ast::Module{ref statements, module_id: "module-name"}, statements.len() == 2);
+        matches!(res, &Ast::Module {
+            statements: &[_, _],
+            module_id: "module-name"
+        });
     });
 }

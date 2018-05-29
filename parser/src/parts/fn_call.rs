@@ -65,9 +65,10 @@ fn basic_function_call() {
     with_parsed_expression("abc()", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
-            &Ast::FunctionCall{ target: &Ast::Identifier(_, "abc"), ref args},
-
-            args.len() == 0
+            &Ast::FunctionCall {
+                target: &Ast::Identifier(_, "abc"),
+                args: &[],
+            },
         };
     });
 }
@@ -79,10 +80,10 @@ fn one_arg_function_call() {
     with_parsed_expression("abc(123)", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
-            &Ast::FunctionCall{ target: &Ast::Identifier(_, "abc"), ref args},
-
-            args.len() == 1,
-            matches!(args[0], ArgumentSyntax::Expression(&Ast::Integer(_, 123)))
+            &Ast::FunctionCall {
+                target: &Ast::Identifier(_, "abc"),
+                args: &[ArgumentSyntax::Expression(&Ast::Integer(_, 123))],
+            },
         };
     });
 }
@@ -94,11 +95,13 @@ fn two_arg_function_call_with_one_underscore() {
     with_parsed_expression("abc(123, _)", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
-            &Ast::FunctionCall{ target: &Ast::Identifier(_, "abc"), ref args},
-
-            args.len() == 2,
-            matches!(args[0], ArgumentSyntax::Expression(&Ast::Integer(_, 123))),
-            matches!(args[1], ArgumentSyntax::Underscore)
+            &Ast::FunctionCall {
+                target: &Ast::Identifier(_, "abc"),
+                args: &[
+                    ArgumentSyntax::Expression(&Ast::Integer(_, 123)),
+                    ArgumentSyntax::Underscore,
+                ],
+            },
         };
     });
 }
@@ -110,10 +113,10 @@ fn one_arg_function_call_with_underscore() {
     with_parsed_expression("abc(_)", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
-            &Ast::FunctionCall{ target: &Ast::Identifier(_, "abc"), ref args},
-
-            args.len() == 1,
-            matches!(args[0], ArgumentSyntax::Underscore)
+            &Ast::FunctionCall {
+                target: &Ast::Identifier(_, "abc"),
+                args: &[ArgumentSyntax::Underscore]
+            },
         };
     });
 }
@@ -125,11 +128,13 @@ fn two_arg_function_call_with_underscore() {
     with_parsed_expression("abc(_, _)", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
-            &Ast::FunctionCall{ target: &Ast::Identifier(_, "abc"), ref args},
-
-            args.len() == 2,
-            matches!(args[0], ArgumentSyntax::Underscore),
-            matches!(args[1], ArgumentSyntax::Underscore)
+            &Ast::FunctionCall {
+                target: &Ast::Identifier(_, "abc"),
+                args: &[
+                    ArgumentSyntax::Underscore,
+                    ArgumentSyntax::Underscore
+                ],
+            },
         };
     });
 }
@@ -141,11 +146,13 @@ fn multi_arg_function_call() {
     with_parsed_expression("abc(123,cde)", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
-            &Ast::FunctionCall{ target: &Ast::Identifier(_, "abc"), ref args},
-
-            args.len() == 2,
-            matches!(args[0], ArgumentSyntax::Expression(&Ast::Integer(_, 123))),
-            matches!(args[1], ArgumentSyntax::Expression(&Ast::Identifier(_, "cde")))
+            &Ast::FunctionCall {
+                target: &Ast::Identifier(_, "abc"),
+                args: &[
+                    ArgumentSyntax::Expression(&Ast::Integer(_, 123)),
+                    ArgumentSyntax::Expression(&Ast::Identifier(_, "cde")),
+                ]
+            },
         };
     });
 }
@@ -157,17 +164,13 @@ fn nested_function_call() {
     with_parsed_expression("abc(def(),ghi(123))", |res| {
         let (res, _) = res.unwrap();
         matches!{res,
-            &Ast::FunctionCall{ target: &Ast::Identifier(_, "abc"), ref args},
-
-            args.len() == 2,
-            matches!{args[0],
-                ArgumentSyntax::Expression(&Ast::FunctionCall{ref args, ..}),
-                args.len() == 0
+            &Ast::FunctionCall {
+                target: &Ast::Identifier(_, "abc"),
+                args: &[
+                    ArgumentSyntax::Expression(&Ast::FunctionCall{args: &[], ..}),
+                    ArgumentSyntax::Expression(&Ast::FunctionCall{args: &[_], ..}),
+                ]
             },
-            matches!{args[1],
-                ArgumentSyntax::Expression(&Ast::FunctionCall{ref args, ..}),
-                args.len() == 1
-            }
         };
     });
 }
