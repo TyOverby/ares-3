@@ -10,5 +10,6 @@ members = [
     "semantics-test",
     "repl",
     "ast-cont",
-    "ast-lower"
+    "ast-lower",
+    "copy_arena",
 ]
